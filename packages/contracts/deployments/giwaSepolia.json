@@ -1,0 +1,10 @@
+{
+  "contract": "NabbMarket",
+  "network": "giwaSepolia",
+  "chainId": 91342,
+  "address": "0xF956a04217FB14428A74AC5aFB8D7302C4ac53df",
+  "deployer": "0x8557FABdC62f59A1bA7D6a74aaf0942CDcb68F69",
+  "transactionHash": "0xa29afcf58697ead8a0556b47b016d5c9aac6fd62a12229d66d5a17d10f94bcf4",
+  "blockNumber": 39578724,
+  "deployedAt": "2026-10-25T10:23:59.495Z"
+}
