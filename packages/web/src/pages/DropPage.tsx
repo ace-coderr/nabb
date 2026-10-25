@@ -2,8 +2,10 @@ import { explorerAddressUrl, giwaSepolia, nabbMarket } from "@nabb/config";
 import { useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { ClaimFeed } from "../components/ClaimFeed";
 import { DropArt, PhaseBadge, ProgressBar } from "../components/DropBits";
 import { NabButton } from "../components/NabButton";
+import { useClaimFeed } from "../hooks/useClaimFeed";
 import { useDrop } from "../hooks/useDrop";
 import { useEnsureChain } from "../hooks/useEnsureChain";
 import { useMetadata } from "../hooks/useMetadata";
@@ -18,8 +20,14 @@ export function DropPage() {
   const location = useLocation();
   const justCreated = (location.state as { justCreated?: boolean } | null)?.justCreated === true;
   const now = useNow();
-  const { drop, isLoading, notFound, error, walletClaims, refetch } = useDrop(dropId);
+  const { drop, isLoading, notFound, error, walletClaims, applyClaims, applyOwnClaim, refetch } =
+    useDrop(dropId);
   const { data: metadata } = useMetadata(drop?.metadataURI, dropId);
+  // Each new preconfirmed claim moves the counters straight away, then a fresh read confirms them.
+  const feed = useClaimFeed(notFound ? undefined : dropId, (claims) => {
+    applyClaims(claims);
+    void refetch();
+  });
 
   if (dropId === undefined || notFound) {
     return (
@@ -117,6 +125,13 @@ export function DropPage() {
             phase={phase}
             walletClaims={walletClaims}
             now={now}
+            onPreconfirmed={(claim, broadcastAt) => {
+              if (claim) {
+                applyClaims([claim]);
+                feed.addClaims([claim]);
+              }
+              applyOwnClaim(broadcastAt);
+            }}
             onSettled={() => void refetch()}
           />
 
@@ -132,6 +147,8 @@ export function DropPage() {
           <SellerControls dropId={dropId} drop={drop} onClosed={() => void refetch()} />
         </div>
       </div>
+
+      <ClaimFeed claims={feed.claims} status={feed.status} now={now} />
     </div>
   );
 }

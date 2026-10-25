@@ -746,3 +746,143 @@ a.drop-card:hover {
     flex-direction: column;
   }
 }
+
+/* Latency readout */
+.ticker {
+  display: inline-block;
+  min-width: 5ch;
+  text-align: left;
+}
+.nab-success {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.nab-latency {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  animation: pop 0.35s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+.nab-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 13px;
+  color: var(--text);
+}
+.nab-final {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+/* Transform only: the readout must stay readable even where animations never run. */
+@keyframes pop {
+  0% {
+    transform: scale(0.85);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.spinner {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Live feed */
+.feed {
+  margin-top: 40px;
+  padding: 20px;
+}
+.feed-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.feed-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.feed-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.feed-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.feed-status-live .feed-dot {
+  background: var(--accent);
+  animation: pulse 1.4s ease-out infinite;
+}
+.feed-status-error .feed-dot {
+  background: var(--warn);
+}
+.feed-empty {
+  padding: 24px 0 8px;
+  text-align: center;
+}
+.feed-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.feed-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+}
+.feed-row:first-child {
+  border-top: 0;
+}
+.feed-row-live {
+  animation: arrive 1.2s ease-out;
+}
+@keyframes arrive {
+  0% {
+    background: var(--accent-soft);
+    transform: translateY(-6px);
+  }
+  30% {
+    transform: none;
+  }
+  100% {
+    background: transparent;
+  }
+}
+.feed-unit {
+  color: var(--accent);
+}
+.feed-who {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.feed-time {
+  font-size: 13px;
+}
