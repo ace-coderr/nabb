@@ -4,6 +4,22 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "test": "tsx --test \"src/**/*.test.ts\"",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.1",
+    "@nabb/config": "workspace:^",
+    "fastify": "^5.12.7",
+    "viem": "^2.57.11"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "tsup": "^9.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3"
   }
 }

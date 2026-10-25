@@ -24,3 +24,6 @@ pnpm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# indexer state
+packages/indexer/data/
