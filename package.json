@@ -19,6 +19,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "contracts:deploy": "pnpm --filter @nabb/contracts deploy:giwa-sepolia",
+    "contracts:verify": "pnpm --filter @nabb/contracts verify:giwa-sepolia",
     "contracts:demo-drop": "pnpm --filter @nabb/contracts demo-drop:giwa-sepolia",
     "config:sync": "pnpm --filter @nabb/contracts build && pnpm --filter @nabb/config sync"
   },

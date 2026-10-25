@@ -9,7 +9,8 @@
     "typecheck": "hardhat compile --quiet && tsc --noEmit",
     "clean": "hardhat clean",
     "deploy:giwa-sepolia": "hardhat run scripts/deploy.ts --network giwaSepolia",
-    "demo-drop:giwa-sepolia": "hardhat run scripts/create-demo-drop.ts --network giwaSepolia"
+    "demo-drop:giwa-sepolia": "hardhat run scripts/create-demo-drop.ts --network giwaSepolia",
+    "verify:giwa-sepolia": "hardhat run scripts/verify.ts --network giwaSepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
