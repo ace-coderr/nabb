@@ -1,6 +1,6 @@
 import { explorerTxUrl } from "@nabb/config";
 import { useAccount } from "wagmi";
-import type { FeedClaim, FeedStatus } from "../hooks/useClaimFeed";
+import type { FeedClaim, FeedHistory, FeedStatus } from "../hooks/useClaimFeed";
 import { formatAgo, formatPrice, shortAddress } from "../lib/format";
 
 const STATUS_LABEL: Record<FeedStatus, string> = {
@@ -12,10 +12,12 @@ const STATUS_LABEL: Record<FeedStatus, string> = {
 export function ClaimFeed({
   claims,
   status,
+  history,
   now,
 }: {
   claims: FeedClaim[];
   status: FeedStatus;
+  history: FeedHistory;
   now: number;
 }) {
   const { address } = useAccount();
@@ -30,9 +32,17 @@ export function ClaimFeed({
         </span>
       </div>
 
+      {history === "recent" && (
+        <p className="feed-note muted small">
+          The indexer is unreachable, so only claims from the last few hours are shown.
+        </p>
+      )}
+
       {claims.length === 0 ? (
         <div className="feed-empty muted">
-          {status === "connecting" ? "Loading recent claims…" : "No claims yet — be the first."}
+          {status === "connecting" && history === "loading"
+            ? "Loading claims…"
+            : "No claims yet — be the first."}
         </div>
       ) : (
         <ol className="feed-list">

@@ -148,7 +148,7 @@ export function DropPage() {
         </div>
       </div>
 
-      <ClaimFeed claims={feed.claims} status={feed.status} now={now} />
+      <ClaimFeed claims={feed.claims} status={feed.status} history={feed.history} now={now} />
     </div>
   );
 }
