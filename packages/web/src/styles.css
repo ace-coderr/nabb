@@ -476,6 +476,11 @@ a.drop-card:hover {
   gap: 12px;
   flex-wrap: wrap;
 }
+.load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
 .section-head {
   display: flex;
   justify-content: space-between;
@@ -890,9 +895,6 @@ a.drop-card:hover {
 }
 .feed-status-error .feed-dot {
   background: var(--warn);
-}
-.feed-note {
-  margin: -4px 0 8px;
 }
 .feed-empty {
   padding: 24px 0 8px;

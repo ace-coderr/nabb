@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import { DropCard } from "../components/DropCard";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
@@ -5,9 +6,12 @@ import { useNow } from "../hooks/useNow";
 import { useRecentDrops } from "../hooks/useRecentDrops";
 import { describeError } from "../lib/errors";
 
+const PAGE_SIZE = 12;
+
 export function Home() {
   const now = useNow();
-  const { items, isLoading, error, refetch } = useRecentDrops();
+  const [count, setCount] = useState(PAGE_SIZE);
+  const { items, hasMore, isLoading, error, refetch } = useRecentDrops(count);
   useDocumentTitle();
 
   return (
@@ -64,9 +68,17 @@ export function Home() {
 
         {items.length > 0 && (
           <div className="grid">
-            {items.map(({ id, drop }) => (
-              <DropCard key={id.toString()} id={id} drop={drop} now={now} />
+            {items.map((item) => (
+              <DropCard key={item.id.toString()} item={item} now={now} />
             ))}
+          </div>
+        )}
+
+        {items.length > 0 && hasMore && (
+          <div className="load-more">
+            <button className="btn" onClick={() => setCount((c) => c + PAGE_SIZE)}>
+              Show older drops
+            </button>
           </div>
         )}
       </section>

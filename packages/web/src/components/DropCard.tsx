@@ -1,13 +1,16 @@
 import { Link } from "react-router";
 import { useMetadata } from "../hooks/useMetadata";
-import { dropPhase, type Drop } from "../lib/drop";
+import type { DropListItem } from "../hooks/useRecentDrops";
+import { reconciledPhase } from "../lib/drop";
 import { formatDuration, formatPrice } from "../lib/format";
 import { DropArt, PhaseBadge, ProgressBar } from "./DropBits";
 
-export function DropCard({ id, drop, now }: { id: bigint; drop: Drop; now: number }) {
+export function DropCard({ item, now }: { item: DropListItem; now: number }) {
+  const { id, drop } = item;
   const { data: metadata } = useMetadata(drop.metadataURI, id);
-  const phase = dropPhase(drop, now);
+  const phase = reconciledPhase(drop, now, item.isLive);
   const name = metadata?.name ?? `Drop #${id}`;
+  const left = item.remaining ?? drop.totalUnits - drop.claimedUnits;
 
   let timing = "";
   if (phase === "upcoming") timing = `Opens in ${formatDuration(Number(drop.startTime) - now)}`;
@@ -25,10 +28,10 @@ export function DropCard({ id, drop, now }: { id: bigint; drop: Drop; now: numbe
         <div className="drop-card-row">
           <span className="price">{formatPrice(drop.price)}</span>
           <span className="muted">
-            {(drop.totalUnits - drop.claimedUnits).toString()} / {drop.totalUnits.toString()} left
+            {left.toString()} / {drop.totalUnits.toString()} left
           </span>
         </div>
-        <ProgressBar claimed={drop.claimedUnits} total={drop.totalUnits} />
+        <ProgressBar claimed={drop.totalUnits - left} total={drop.totalUnits} />
         {timing && <div className="muted small">{timing}</div>}
       </div>
     </Link>

@@ -13,6 +13,20 @@ export function dropPhase(drop: Drop, nowSeconds: number): DropPhase {
   return "live";
 }
 
+/**
+ * The phase from the local clock, corrected by the contract's own `isLive()` when the two
+ * disagree (e.g. a skewed device clock). Without `isLive` the local view is used as is.
+ */
+export function reconciledPhase(drop: Drop, nowSeconds: number, isLive?: boolean): DropPhase {
+  const local = dropPhase(drop, nowSeconds);
+  if (isLive === undefined || isLive === (local === "live")) return local;
+  if (isLive) return "live";
+  // The chain says closed while the local clock says open: the chain's time is outside the window.
+  const sinceStart = nowSeconds - Number(drop.startTime);
+  const untilEnd = Number(drop.endTime) - nowSeconds;
+  return sinceStart < untilEnd ? "upcoming" : "ended";
+}
+
 export const PHASE_LABEL: Record<DropPhase, string> = {
   upcoming: "Upcoming",
   live: "Live",

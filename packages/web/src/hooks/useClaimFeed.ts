@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { watchPendingClaims, type ClaimEvent } from "../lib/flashblocks";
-import { fetchDropClaims } from "../lib/indexer";
+import { fetchDropClaims, indexerAvailable } from "../lib/indexer";
 
 export interface FeedClaim extends ClaimEvent {
   /** Arrived after the page loaded (as opposed to history). */
@@ -9,23 +9,18 @@ export interface FeedClaim extends ClaimEvent {
 
 export type FeedStatus = "connecting" | "live" | "error";
 
-/** Where older claims come from: the indexer, or only the Flashblocks look-back window. */
-export type FeedHistory = "loading" | "indexer" | "recent";
-
 const MAX_ITEMS = 50;
 
 interface FeedState {
   dropId: bigint | undefined;
   claims: FeedClaim[];
   status: FeedStatus;
-  history: FeedHistory;
 }
 
 const initialState = (dropId: bigint | undefined): FeedState => ({
   dropId,
   claims: [],
   status: "connecting",
-  history: "loading",
 });
 
 function mergeClaims(base: FeedClaim[], fresh: ClaimEvent[], live: boolean): FeedClaim[] {
@@ -41,9 +36,9 @@ function mergeClaims(base: FeedClaim[], fresh: ClaimEvent[], live: boolean): Fee
 }
 
 /**
- * Claim feed for a drop, newest first. History comes from the indexer; new claims stream in from
- * the Flashblocks RPC the moment they are preconfirmed. Both use the same `txHash:logIndex` ids,
- * so overlapping entries merge into one.
+ * Claim feed for a drop, newest first, read from chain logs: history from sealed blocks and new
+ * claims from the Flashblocks RPC the moment they are preconfirmed. A healthy indexer, when one is
+ * configured, fills history faster. Every source uses `txHash:logIndex` ids, so overlaps merge.
  */
 export function useClaimFeed(
   dropId: bigint | undefined,
@@ -61,19 +56,15 @@ export function useClaimFeed(
     const update = (fn: (prev: FeedState) => FeedState) =>
       setState((prev) => fn(prev.dropId === dropId ? prev : initialState(dropId)));
 
-    fetchDropClaims(dropId)
+    void indexerAvailable()
+      .then((ok) => (ok ? fetchDropClaims(dropId) : undefined))
       .then((claims) => {
-        if (cancelled) return;
-        update((prev) => ({
-          ...prev,
-          claims: mergeClaims(prev.claims, claims, false),
-          history: "indexer",
-        }));
+        if (cancelled || !claims) return;
+        update((prev) => ({ ...prev, claims: mergeClaims(prev.claims, claims, false) }));
         onNewRef.current?.(claims);
       })
-      .catch(() => {
-        if (!cancelled) update((prev) => ({ ...prev, history: "recent" }));
-      });
+      // The on-chain history walk covers the same ground, so an indexer failure needs no handling.
+      .catch(() => undefined);
 
     const stop = watchPendingClaims({
       dropId,
@@ -110,7 +101,6 @@ export function useClaimFeed(
   return {
     claims: current.claims,
     status: current.status,
-    history: current.history,
     addClaims,
   };
 }

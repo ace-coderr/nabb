@@ -17,6 +17,7 @@ import {
   type TransactionReceipt,
 } from "viem";
 import { FLASHBLOCKS_RPC_URL, STANDARD_RPC_URL } from "../env";
+import { contractErrorName } from "./errors";
 
 /** Sealed-block reads and final receipts. */
 export const standardClient = createPublicClient({
@@ -163,18 +164,26 @@ export interface WatchClaimsOptions {
   onClaims: (claims: ClaimEvent[], source: ClaimSource) => void;
   onStatus?: (status: { ok: boolean; error?: unknown }) => void;
   intervalMs?: number;
-  /** How far back the one-off backfill looks. Older history comes from the indexer. */
-  lookbackBlocks?: bigint;
+  /** Most claims the history backfill fetches (newest first). */
+  historyLimit?: number;
 }
 
 const HEAD_REFRESH_MS = 2_000;
+// History is read from sealed blocks in ranges this size, a few at a time, newest first.
+const HISTORY_CHUNK_BLOCKS = 10_000n;
+const HISTORY_PARALLEL = 3;
+const HISTORY_ATTEMPTS = 3;
+// One slow or dropped poll is normal on public RPCs; only a streak means the feed is down.
+const FAILURES_BEFORE_DOWN = 3;
 // Re-read a few sealed blocks each poll so nothing is missed while a block is being finalised;
 // duplicates are dropped by id.
 const OVERLAP_BLOCKS = 5n;
 
 /**
  * Emits every `Claimed` log for a drop exactly once:
- * - a one-off backfill of recent history, run in parallel so a slow range query never delays
+ * - a history backfill that walks sealed blocks back from the head, newest first, until it has
+ *   every claim the drop reports (up to `historyLimit`) or reaches the deploy block. It runs
+ *   beside the live loop so a long walk never delays new claims;
  * - a live loop that polls up to the `pending` tag (latest flashblock) every `intervalMs`.
  * Returns an unsubscribe function.
  */
@@ -183,7 +192,7 @@ export function watchPendingClaims({
   onClaims,
   onStatus,
   intervalMs = 250,
-  lookbackBlocks = 10_000n,
+  historyLimit = 50,
 }: WatchClaimsOptions): () => void {
   const seen = new Set<string>();
   let stopped = false;
@@ -191,6 +200,7 @@ export function watchPendingClaims({
   let cursor: bigint | undefined;
   let head = 0n;
   let headCheckedAt = 0;
+  let failures = 0;
 
   const emit = (logs: ClaimLog[], source: ClaimSource) => {
     if (stopped) return;
@@ -204,6 +214,40 @@ export function watchPendingClaims({
     if (fresh.length > 0) onClaims(fresh, source);
   };
 
+  const backfill = async (toBlock: bigint) => {
+    // The drop's claim count says how much history exists, so the walk can stop early.
+    let wanted = BigInt(historyLimit);
+    try {
+      const drop = await readDropPending(dropId);
+      if (drop.claimedUnits < wanted) wanted = drop.claimedUnits;
+    } catch (error) {
+      if (contractErrorName(error) === "DropNotFound") return;
+    }
+
+    let to = toBlock;
+    while (!stopped && to >= nabbMarketDeployBlock && BigInt(seen.size) < wanted) {
+      const ranges: [bigint, bigint][] = [];
+      while (ranges.length < HISTORY_PARALLEL && to >= nabbMarketDeployBlock) {
+        const from = to - HISTORY_CHUNK_BLOCKS + 1n;
+        const start = from > nabbMarketDeployBlock ? from : nabbMarketDeployBlock;
+        ranges.push([start, to]);
+        to = start - 1n;
+      }
+      for (let attempt = 1; ; attempt++) {
+        try {
+          const results = await Promise.all(
+            ranges.map(([from, upTo]) => fetchClaimLogs(dropId, from, upTo, standardClient)),
+          );
+          emit(results.flat(), "backfill");
+          break;
+        } catch (error) {
+          if (attempt >= HISTORY_ATTEMPTS || stopped) throw error;
+          await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+        }
+      }
+    }
+  };
+
   const tick = async () => {
     const startedAt = Date.now();
     try {
@@ -212,14 +256,8 @@ export function watchPendingClaims({
         headCheckedAt = startedAt;
         if (cursor === undefined) {
           cursor = head - OVERLAP_BLOCKS;
-          const from = head - lookbackBlocks;
-          fetchClaimLogs(
-            dropId,
-            from > nabbMarketDeployBlock ? from : nabbMarketDeployBlock,
-            cursor,
-          )
-            .then((logs) => emit(logs, "backfill"))
-            .catch((error: unknown) => onStatus?.({ ok: false, error }));
+          // A failed history walk leaves older rows out but says nothing about the live feed.
+          backfill(cursor - 1n).catch(() => undefined);
         }
       }
 
@@ -227,9 +265,11 @@ export function watchPendingClaims({
 
       const next = head - OVERLAP_BLOCKS;
       if (next > cursor) cursor = next;
+      failures = 0;
       if (!stopped) onStatus?.({ ok: true });
     } catch (error) {
-      if (!stopped) onStatus?.({ ok: false, error });
+      failures++;
+      if (!stopped && failures >= FAILURES_BEFORE_DOWN) onStatus?.({ ok: false, error });
     } finally {
       if (!stopped) {
         timer = setTimeout(() => void tick(), Math.max(0, intervalMs - (Date.now() - startedAt)));
@@ -244,8 +284,13 @@ export function watchPendingClaims({
   };
 }
 
-function fetchClaimLogs(dropId: bigint, fromBlock: bigint, toBlock: bigint | "pending") {
-  return flashClient.getLogs({
+function fetchClaimLogs(
+  dropId: bigint,
+  fromBlock: bigint,
+  toBlock: bigint | "pending",
+  client: typeof flashClient | typeof standardClient = flashClient,
+) {
+  return client.getLogs({
     address: nabbMarket.address,
     event: claimedEvent,
     args: { dropId },
