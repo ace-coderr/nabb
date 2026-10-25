@@ -1,6 +1,8 @@
 import { Link } from "react-router";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 export function NotFound() {
+  useDocumentTitle("Not found");
   return (
     <div className="container state">
       <h1>Nothing to nab here</h1>

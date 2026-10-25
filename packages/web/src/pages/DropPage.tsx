@@ -5,14 +5,16 @@ import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { ClaimFeed } from "../components/ClaimFeed";
 import { DropArt, PhaseBadge, ProgressBar } from "../components/DropBits";
 import { NabButton } from "../components/NabButton";
+import { ShareButton } from "../components/ShareButton";
 import { useClaimFeed } from "../hooks/useClaimFeed";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useDrop } from "../hooks/useDrop";
 import { useEnsureChain } from "../hooks/useEnsureChain";
 import { useMetadata } from "../hooks/useMetadata";
 import { useNow } from "../hooks/useNow";
 import { dropPhase, parseDropId, type Drop } from "../lib/drop";
 import { describeError } from "../lib/errors";
-import { formatDateTime, formatDuration, formatPrice, shortAddress } from "../lib/format";
+import { formatDateTime, formatDuration, formatEth, shortAddress } from "../lib/format";
 
 export function DropPage() {
   const params = useParams();
@@ -28,6 +30,9 @@ export function DropPage() {
     applyClaims(claims);
     void refetch();
   });
+  useDocumentTitle(
+    dropId === undefined || notFound ? "Drop not found" : (metadata?.name ?? `Drop #${dropId}`),
+  );
 
   if (dropId === undefined || notFound) {
     return (
@@ -74,8 +79,9 @@ export function DropPage() {
   return (
     <div className="container">
       {justCreated && (
-        <div className="notice notice-success">
-          Your drop is live on-chain. Share this page so people can nab it.
+        <div className="notice notice-success notice-row">
+          <span>Your drop is live on-chain. Share this page so people can nab it.</span>
+          <ShareButton title={name} />
         </div>
       )}
       <div className="drop-layout">
@@ -84,7 +90,10 @@ export function DropPage() {
         <div className="drop-info">
           <div className="drop-card-top">
             <PhaseBadge phase={phase} />
-            <span className="muted mono">#{dropId.toString()}</span>
+            <span className="drop-top-actions">
+              <span className="muted mono">#{dropId.toString()}</span>
+              {!justCreated && <ShareButton title={name} />}
+            </span>
           </div>
           <h1 className="drop-title">{name}</h1>
           {metadata?.description && <p className="drop-description">{metadata.description}</p>}
@@ -98,7 +107,16 @@ export function DropPage() {
           <div className="stats">
             <div>
               <div className="stat-label">Price</div>
-              <div className="stat-value">{formatPrice(drop.price)}</div>
+              <div className="stat-value">
+                {drop.price === 0n ? (
+                  "Free"
+                ) : (
+                  <>
+                    {formatEth(drop.price)}
+                    <span className="stat-unit"> ETH</span>
+                  </>
+                )}
+              </div>
             </div>
             <div>
               <div className="stat-label">Left</div>

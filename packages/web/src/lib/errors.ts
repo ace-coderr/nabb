@@ -1,5 +1,4 @@
 import { ContractFunctionRevertedError } from "viem";
-import { GIWA_SEPOLIA_FAUCETS } from "@nabb/config";
 
 const CONTRACT_ERROR_MESSAGES: Record<string, string> = {
   SoldOut: "Sold out — every unit has been nabbed.",
@@ -52,7 +51,7 @@ export function describeError(error: unknown): string {
 
   for (const e of causeChain(error)) {
     if ((e as { name?: string }).name === "InsufficientFundsError") {
-      return `Not enough ETH in your wallet. Top up at ${GIWA_SEPOLIA_FAUCETS[0].url}`;
+      return "Not enough ETH in your wallet. Get free test ETH from the faucets linked below.";
     }
   }
 

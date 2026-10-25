@@ -5,8 +5,11 @@ import { parseEther, parseEventLogs, type Hash } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { ConnectButton } from "../components/ConnectButton";
 import { DropArt, ProgressBar } from "../components/DropBits";
+import { FaucetHint } from "../components/FaucetHint";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useEnsureChain } from "../hooks/useEnsureChain";
 import { useNow } from "../hooks/useNow";
+import { useWalletBalance } from "../hooks/useWalletBalance";
 import { describeError } from "../lib/errors";
 import { formatPrice, toDateTimeLocal } from "../lib/format";
 import { encodeMetadata, isValidImageInput, safeImageUrl } from "../lib/metadata";
@@ -108,6 +111,8 @@ export function CreateDrop() {
   const publicClient = usePublicClient({ chainId: giwaSepolia.id });
   const { writeContractAsync } = useWriteContract();
   const { ensureChain } = useEnsureChain();
+  const { canAfford } = useWalletBalance();
+  useDocumentTitle("Create a drop");
   const [form, setForm] = useState<FormState>(initialForm);
   const [touched, setTouched] = useState(false);
   const [submit, setSubmit] = useState<SubmitState>({ status: "idle" });
@@ -268,6 +273,12 @@ export function CreateDrop() {
             </button>
           ) : (
             <ConnectButton size="lg" />
+          )}
+
+          {isConnected && !canAfford(0n) && (
+            <FaucetHint>
+              Creating a drop needs a little ETH for gas. Grab some free test ETH.
+            </FaucetHint>
           )}
 
           {submit.status === "pending" && (

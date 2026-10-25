@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { DropCard } from "../components/DropCard";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useNow } from "../hooks/useNow";
 import { useRecentDrops } from "../hooks/useRecentDrops";
 import { describeError } from "../lib/errors";
@@ -7,6 +8,7 @@ import { describeError } from "../lib/errors";
 export function Home() {
   const now = useNow();
   const { items, isLoading, error, refetch } = useRecentDrops();
+  useDocumentTitle();
 
   return (
     <div className="container">

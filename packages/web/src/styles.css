@@ -313,6 +313,14 @@ h3 {
 .menu-item:hover {
   background: var(--bg-hover);
 }
+a.menu-item:hover {
+  text-decoration: none;
+}
+.menu-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border);
+}
 .menu-icon {
   width: 20px;
   height: 20px;
@@ -498,6 +506,48 @@ a.drop-card:hover {
   color: var(--danger);
   margin: 0;
 }
+.notice-info {
+  background: var(--accent-soft);
+  color: var(--text);
+  margin: 0;
+}
+.faucet-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+}
+.faucet-links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-weight: 600;
+}
+.notice-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.drop-top-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.error-detail {
+  max-width: 560px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  text-align: left;
+}
 .notice-success {
   background: var(--success-soft);
   color: var(--success);
@@ -663,6 +713,10 @@ a.drop-card:hover {
   font-family: var(--font-display);
   font-size: 24px;
   font-weight: 700;
+}
+.stat-unit {
+  font-size: 0.6em;
+  color: var(--muted);
 }
 .drop-meta {
   display: flex;

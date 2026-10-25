@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { useClaim, type ClaimCallbacks, type ClaimState } from "../hooks/useClaim";
 import { useEnsureChain } from "../hooks/useEnsureChain";
+import { useWalletBalance } from "../hooks/useWalletBalance";
 import type { Drop, DropPhase } from "../lib/drop";
 import { formatDuration, formatPrice } from "../lib/format";
 import { ConnectButton } from "./ConnectButton";
+import { FaucetHint } from "./FaucetHint";
 
 interface Props extends ClaimCallbacks {
   dropId: bigint;
@@ -19,6 +21,7 @@ export function NabButton({ dropId, drop, phase, walletClaims, now, ...callbacks
   const { isConnected } = useAccount();
   const { wrongChain, ensureChain, switching } = useEnsureChain();
   const { state, claim } = useClaim(callbacks);
+  const { canAfford } = useWalletBalance();
 
   if (!isConnected) return <ConnectButton size="lg" />;
 
@@ -57,6 +60,12 @@ export function NabButton({ dropId, drop, phase, walletClaims, now, ...callbacks
     label = "Wallet limit reached";
     disabled = true;
   }
+  // Only worth flagging when funds are the one thing standing between the user and a claim.
+  const needsFunds = !disabled && !canAfford(drop.price);
+  if (needsFunds) {
+    label = "Not enough ETH";
+    disabled = true;
+  }
 
   return (
     <div className="nab">
@@ -67,6 +76,11 @@ export function NabButton({ dropId, drop, phase, walletClaims, now, ...callbacks
       >
         {label}
       </button>
+      {needsFunds && (
+        <FaucetHint>
+          You need {formatPrice(drop.price)} plus a little gas. Grab free test ETH, then come back.
+        </FaucetHint>
+      )}
       <ClaimResult state={state} />
     </div>
   );

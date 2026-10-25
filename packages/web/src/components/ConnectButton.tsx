@@ -1,4 +1,4 @@
-import { giwaSepolia } from "@nabb/config";
+import { GIWA_SEPOLIA_FAUCETS, giwaSepolia } from "@nabb/config";
 import { useEffect, useRef, useState } from "react";
 import { useAccount, useBalance, useConnect, useDisconnect, type Connector } from "wagmi";
 import { useEnsureChain } from "../hooks/useEnsureChain";
@@ -66,6 +66,19 @@ export function ConnectButton({ size = "md" }: { size?: "md" | "lg" }) {
             >
               Copy address
             </button>
+            {GIWA_SEPOLIA_FAUCETS.map((faucet) => (
+              <a
+                key={faucet.url}
+                className="menu-item"
+                href={faucet.url}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => setOpen(false)}
+              >
+                Get test ETH · {faucet.name.replace(/ Faucet$/, "")} ↗
+              </a>
+            ))}
+            <div className="menu-divider" />
             <button
               className="menu-item"
               onClick={() => {
