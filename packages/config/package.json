@@ -9,6 +9,14 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "sync": "node scripts/sync-contracts.mjs && prettier --write src/generated",
     "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "viem": "^2.57.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15",
+    "viem": "^2.57.11"
   }
 }
