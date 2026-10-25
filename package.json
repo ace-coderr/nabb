@@ -6,15 +6,21 @@
   "license": "MIT",
   "packageManager": "pnpm@9.15.9",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19"
   },
   "scripts": {
+    "dev": "pnpm --parallel --filter @nabb/web --filter @nabb/indexer dev",
+    "dev:web": "pnpm --filter @nabb/web dev",
+    "dev:indexer": "pnpm --filter @nabb/indexer dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "contracts:deploy": "pnpm --filter @nabb/contracts deploy:giwa-sepolia",
+    "contracts:demo-drop": "pnpm --filter @nabb/contracts demo-drop:giwa-sepolia",
+    "config:sync": "pnpm --filter @nabb/contracts build && pnpm --filter @nabb/config sync"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
