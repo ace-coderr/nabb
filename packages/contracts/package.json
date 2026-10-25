@@ -7,7 +7,8 @@
     "test": "hardhat test",
     "coverage": "hardhat coverage",
     "typecheck": "hardhat compile --quiet && tsc --noEmit",
-    "clean": "hardhat clean"
+    "clean": "hardhat clean",
+    "deploy:giwa-sepolia": "hardhat run scripts/deploy.ts --network giwaSepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
