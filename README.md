@@ -40,16 +40,19 @@ All Flashblocks reads live in one module: [`packages/web/src/lib/flashblocks.ts`
 
 > The measured latency includes the network round trip to GIWA's RPC. Near the RPC it lands around 200ms; from far away, expect roughly one round trip on top.
 
-### History (indexer)
+### Reading drops and history
 
-A small Fastify service tails `DropCreated`, `Claimed` and `DropClosed` from sealed blocks and serves a REST feed. The web app reads drop lists and claim history from it and merges the live Flashblocks feed on top. If the indexer is unreachable, the app falls back to reading the contract directly and the feed shows the last few hours of claims from Flashblocks.
+The web app needs nothing but the chain. The drops list reads NabbMarket directly — ids `nextDropId - 1` down to 1, one multicall of `getDrop` / `remaining` / `isLive` per page — and each drop's claim history is read from `Claimed` logs, walking sealed blocks back from the head until every claim the drop reports has been found. New claims arrive through the Flashblocks feed.
+
+The **indexer** (`packages/indexer`) is an optional extra: a small Fastify service that tails `DropCreated`, `Claimed` and `DropClosed` and serves the same data over REST. The app uses it only when `VITE_INDEXER_URL` is set **and** its `/health` check passes for this chain and contract; otherwise it falls back to the on-chain path without any visible change. The deployed site runs without one.
 
 ```
                      ┌──────────── claim tx ────────────┐
    browser wallet ───┘                                   ▼
                                                standard RPC ──▶ GIWA sequencer
    web app ◀── receipts (50ms) / pending logs (250ms) ── Flashblocks RPC
-   web app ◀── REST: drops, claim history ── indexer ◀── sealed logs ── standard RPC
+   web app ◀── drops (multicall) / claim history (logs) ── standard RPC
+   web app ◀┄┄ optional REST: drops, claim history ┄┄ indexer ◀── sealed logs ── standard RPC
 ```
 
 ---
@@ -61,7 +64,7 @@ A small Fastify service tails `DropCreated`, `Claimed` and `DropClosed` from sea
 | [`packages/contracts`](packages/contracts) | `NabbMarket.sol`, tests, deploy and demo scripts (Hardhat + TypeScript)        |
 | [`packages/config`](packages/config)       | GIWA Sepolia viem chain, NabbMarket ABI + deployment, shared indexer API types |
 | [`packages/web`](packages/web)             | React + Vite app (wagmi v2, viem v2)                                           |
-| [`packages/indexer`](packages/indexer)     | Event indexer and REST API (Node + Fastify)                                    |
+| [`packages/indexer`](packages/indexer)     | Optional event indexer and REST API (Node + Fastify), local use                |
 
 ## GIWA Sepolia
 
@@ -99,7 +102,7 @@ This starts both:
 - **web** on http://localhost:5173
 - **indexer** on http://localhost:8787 (first run backfills from the deploy block in a few seconds)
 
-Open the web app, connect your wallet (it offers to add/switch to GIWA Sepolia), create a drop and nab it. To run them separately: `pnpm dev:web` and `pnpm dev:indexer`.
+Open the web app, connect your wallet (it offers to add/switch to GIWA Sepolia), create a drop and nab it. In development the app points at the local indexer through the committed `packages/web/.env.development`; `pnpm dev:web` on its own works too and simply reads everything on-chain. To run the indexer alone: `pnpm dev:indexer`.
 
 ### Configuration
 
@@ -111,7 +114,7 @@ Everything works with no configuration. Optional overrides:
 | ------------------------------- | ----------------------------------------- |
 | `VITE_GIWA_RPC_URL`             | `https://sepolia-rpc.giwa.io`             |
 | `VITE_GIWA_FLASHBLOCKS_RPC_URL` | `https://sepolia-rpc-flashblocks.giwa.io` |
-| `VITE_INDEXER_URL`              | `http://localhost:8787`                   |
+| `VITE_INDEXER_URL`              | unset — on-chain reads only               |
 
 **`packages/indexer/.env`** (read from the process environment)
 
@@ -128,6 +131,29 @@ Everything works with no configuration. Optional overrides:
 **`packages/contracts/.env`** — only needed to deploy. See below.
 
 Every `.env` file is gitignored; each package has a `.env.example`.
+
+---
+
+## Deploy to Vercel
+
+The web app ships as a static site that talks straight to GIWA Sepolia — no server or indexer needed.
+
+1. In Vercel, **Add New → Project** and import this repository.
+2. Leave **Root Directory** as the repository root. All build settings come from [`vercel.json`](vercel.json):
+   - install: `pnpm install`
+   - build: `pnpm --filter @nabb/web build`
+   - output: `packages/web/dist`
+   - every path rewrites to `/index.html`, so `/create` and `/drop/:id` work on direct visits and refreshes.
+3. Deploy. **No environment variables are required.**
+
+To use a hosted indexer, set `VITE_INDEXER_URL` to its HTTPS URL (and allow the site's origin with the indexer's `CORS_ORIGIN`). The site checks its health first and falls back to on-chain reads whenever it is unavailable.
+
+To reproduce the production build locally:
+
+```bash
+pnpm --filter @nabb/web build
+pnpm --filter @nabb/web preview
+```
 
 ---
 
@@ -190,6 +216,8 @@ The indexer keys its snapshot to the chain and contract address, so after a rede
 
 ## Indexer
 
+The indexer is optional and meant for local use; the deployed site does not need it.
+
 ```bash
 pnpm --filter @nabb/indexer dev     # watch mode
 pnpm --filter @nabb/indexer test    # store + API tests
@@ -235,5 +263,5 @@ Response types are exported from `@nabb/config` (`IndexedDrop`, `IndexedClaim`, 
 
 - **Testnet software.** NabbMarket has a full test suite but has not been audited.
 - **Fixed prices.** The price of a drop never changes once it is created.
-- **Without the indexer**, drop lists are read from the contract and claim history covers roughly the last 10,000 blocks (about 2.8 hours) via Flashblocks.
+- **Claim history** shows up to the 50 most recent claims per drop, read from chain logs (or the indexer when one is in use).
 - **Metadata** for drops created in the app is stored on-chain as a base64 JSON `data:` URI (`name`, `description`, `image`); `ipfs://` and `https://` JSON URIs are also supported.
