@@ -74,7 +74,7 @@ A small Fastify service tails `DropCreated`, `Claimed` and `DropClosed` from sea
 | Explorer        | https://sepolia-explorer.giwa.io                                  |
 | Faucets         | https://faucet.giwa.io · https://faucet.lambda256.io/giwa-sepolia |
 
-**NabbMarket** is deployed at [`0xF956a04217FB14428A74AC5aFB8D7302C4ac53df`](https://sepolia-explorer.giwa.io/address/0xF956a04217FB14428A74AC5aFB8D7302C4ac53df) (block 39578724). The address and deploy block are recorded in [`packages/contracts/deployments/giwaSepolia.json`](packages/contracts/deployments/giwaSepolia.json) and exported from `@nabb/config`.
+**NabbMarket** is deployed at [`0xF956a04217FB14428A74AC5aFB8D7302C4ac53df`](https://sepolia-explorer.giwa.io/address/0xF956a04217FB14428A74AC5aFB8D7302C4ac53df) (block 39578724) and its source is [verified on the explorer](https://sepolia-explorer.giwa.io/address/0xF956a04217FB14428A74AC5aFB8D7302C4ac53df#code). The address and deploy block are recorded in [`packages/contracts/deployments/giwaSepolia.json`](packages/contracts/deployments/giwaSepolia.json) and exported from `@nabb/config`.
 
 ---
 
@@ -168,7 +168,15 @@ REPORT_GAS=true pnpm --filter @nabb/contracts test   # gas report
 
    This regenerates `packages/config/src/generated/nabbMarket.ts`, which the web app and indexer import. Commit both files.
 
-5. Optionally create a sample drop with the deployer:
+5. Verify the source on the GIWA Sepolia explorer (Blockscout — no API key needed):
+
+   ```bash
+   pnpm contracts:verify
+   ```
+
+   This reads the address from the deployment file and submits the source with the same compiler settings used to deploy.
+
+6. Optionally create a sample drop with the deployer:
 
    ```bash
    pnpm contracts:demo-drop
@@ -217,6 +225,7 @@ Response types are exported from `@nabb/config` (`IndexedDrop`, `IndexedClaim`, 
 | `pnpm typecheck`            | Type-check every package                                 |
 | `pnpm lint` / `pnpm format` | ESLint / Prettier                                        |
 | `pnpm contracts:deploy`     | Deploy NabbMarket to GIWA Sepolia                        |
+| `pnpm contracts:verify`     | Verify NabbMarket's source on the GIWA Sepolia explorer  |
 | `pnpm contracts:demo-drop`  | Create a sample drop                                     |
 | `pnpm config:sync`          | Refresh the ABI + deployment in `@nabb/config`           |
 
