@@ -22,6 +22,8 @@ interface ActivityContextValue {
   push: (incoming: ActivityItem[]) => void;
   /** Whether the one-off history read that fills the buffer at startup has finished. */
   seedStatus: SeedStatus;
+  /** Re-runs the startup history read after it failed. */
+  retrySeed: () => void;
 }
 
 const ActivityContext = createContext<ActivityContextValue | undefined>(undefined);
@@ -44,14 +46,19 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
     queryFn: () => loadRecentClaims(MAX_ITEMS),
     staleTime: Infinity,
     gcTime: Infinity,
-    retry: 1,
+    // Public RPCs occasionally rate-limit a burst; back off and try a few times before giving up.
+    retry: 3,
     refetchOnReconnect: false,
   });
   const seeded = useMemo(() => seed.data?.map(activityFromClaim) ?? [], [seed.data]);
   const seedStatus: SeedStatus = seed.isError ? "error" : seed.isPending ? "loading" : "ready";
 
   const items = useMemo(() => mergeActivity(live, seeded), [live, seeded]);
-  const value = useMemo(() => ({ items, push, seedStatus }), [items, push, seedStatus]);
+  const retrySeed = useCallback(() => void seed.refetch(), [seed]);
+  const value = useMemo(
+    () => ({ items, push, seedStatus, retrySeed }),
+    [items, push, seedStatus, retrySeed],
+  );
   return <ActivityContext.Provider value={value}>{children}</ActivityContext.Provider>;
 }
 

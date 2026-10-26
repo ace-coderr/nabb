@@ -42,7 +42,9 @@ export function Ticker() {
             <span className="ticker-idle">
               {seedStatus === "loading"
                 ? "Loading recent claims…"
-                : "No claims yet — be the first to nab one."}
+                : seedStatus === "error"
+                  ? "Couldn't load recent claims."
+                  : "No claims yet — be the first to nab one."}
             </span>
           ) : (
             <div

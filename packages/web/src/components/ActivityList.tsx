@@ -19,7 +19,7 @@ export function activityText(item: ActivityItem, mine: boolean): string {
 
 /** Shown while the buffer is empty: loading, or a friendly nudge toward the newest drop. */
 function ActivityEmpty({ onNavigate }: { onNavigate?: () => void }) {
-  const { seedStatus } = useActivity();
+  const { seedStatus, retrySeed } = useActivity();
   // A one-off read; nothing here refetches on a timer.
   const { data: nextDropId } = useReadContract({
     ...nabbMarket,
@@ -46,6 +46,11 @@ function ActivityEmpty({ onNavigate }: { onNavigate?: () => void }) {
           ? "Couldn't load recent claims. New ones will still appear here as they land."
           : "No claims yet. Be the first to nab one."}
       </p>
+      {seedStatus === "error" && (
+        <button type="button" className="btn btn-sm" onClick={retrySeed}>
+          Try again
+        </button>
+      )}
       {newest !== undefined ? (
         <Link to={`/drop/${newest}`} className="link-quiet" onClick={onNavigate}>
           Open the newest drop (#{newest.toString()}) →
