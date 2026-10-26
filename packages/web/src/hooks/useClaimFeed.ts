@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { watchPendingClaims, type ClaimEvent } from "../lib/flashblocks";
 import { fetchDropClaims, indexerAvailable } from "../lib/indexer";
+import { loadDropClaims } from "../lib/recentClaims";
 
 export interface FeedClaim extends ClaimEvent {
   /** Arrived after the page loaded (as opposed to history). */
@@ -66,6 +67,21 @@ export function useClaimFeed(
       // The on-chain history walk covers the same ground, so an indexer failure needs no handling.
       .catch(() => undefined);
 
+    // If the Flashblocks RPC cannot be reached its feed has no history to offer (it needs that RPC
+    // to find the chain head), so read this drop's history from the standard RPC, once.
+    let fellBack = false;
+    const fallBackToStandardHistory = () => {
+      if (fellBack) return;
+      fellBack = true;
+      loadDropClaims(dropId)
+        .then((claims) => {
+          if (cancelled || claims.length === 0) return;
+          update((prev) => ({ ...prev, claims: mergeClaims(prev.claims, claims, false) }));
+          onNewRef.current?.(claims);
+        })
+        .catch(() => undefined);
+    };
+
     const stop = watchPendingClaims({
       dropId,
       onClaims: (fresh, source) => {
@@ -79,6 +95,7 @@ export function useClaimFeed(
       onStatus: ({ ok }) => {
         const status: FeedStatus = ok ? "live" : "error";
         update((prev) => (prev.status === status ? prev : { ...prev, status }));
+        if (!ok) fallBackToStandardHistory();
       },
     });
 

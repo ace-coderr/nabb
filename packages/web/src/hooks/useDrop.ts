@@ -1,12 +1,32 @@
+import { nabbMarket } from "@nabb/config";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useAccount } from "wagmi";
 import type { Drop } from "../lib/drop";
-import { contractErrorName } from "../lib/errors";
-import { readDropPending, readWalletClaimsPending, type ClaimEvent } from "../lib/flashblocks";
+import { contractErrorName, isTransientRpcError } from "../lib/errors";
+import {
+  readDropPending,
+  readWalletClaimsPending,
+  standardClient,
+  type ClaimEvent,
+} from "../lib/flashblocks";
 
 // The live claim feed triggers an immediate refetch on every new claim; this is only a backstop.
 const REFRESH_MS = 3_000;
+
+/**
+ * Prefers the preconfirmed (Flashblocks) read, but if that RPC is rate-limited, timing out or
+ * unreachable it reads the sealed state from the standard RPC instead, so a flaky preconfirmation
+ * endpoint never makes a drop unreadable. Contract errors (e.g. DropNotFound) are not retried.
+ */
+async function readWithFallback<T>(preconfirmed: () => Promise<T>, sealed: () => Promise<T>) {
+  try {
+    return await preconfirmed();
+  } catch (error) {
+    if (!isTransientRpcError(error)) throw error;
+    return sealed();
+  }
+}
 
 /**
  * Preconfirmed state of one drop (read from the latest flashblock) plus how many units the
@@ -22,7 +42,16 @@ export function useDrop(dropId: bigint | undefined) {
 
   const drop = useQuery({
     queryKey: dropKey,
-    queryFn: () => readDropPending(dropId!),
+    queryFn: () =>
+      readWithFallback(
+        () => readDropPending(dropId!),
+        () =>
+          standardClient.readContract({
+            ...nabbMarket,
+            functionName: "getDrop",
+            args: [dropId!],
+          }),
+      ),
     enabled,
     refetchInterval: REFRESH_MS,
     retry: (failures, error) => contractErrorName(error) !== "DropNotFound" && failures < 2,
@@ -30,7 +59,16 @@ export function useDrop(dropId: bigint | undefined) {
 
   const walletClaims = useQuery({
     queryKey: walletKey,
-    queryFn: () => readWalletClaimsPending(dropId!, address!),
+    queryFn: () =>
+      readWithFallback(
+        () => readWalletClaimsPending(dropId!, address!),
+        () =>
+          standardClient.readContract({
+            ...nabbMarket,
+            functionName: "claimedByWallet",
+            args: [dropId!, address!],
+          }),
+      ),
     enabled: enabled && address !== undefined,
     refetchInterval: REFRESH_MS,
   });

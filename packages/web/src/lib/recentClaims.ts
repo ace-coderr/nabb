@@ -1,7 +1,7 @@
 import { nabbMarket, nabbMarketAbi, nabbMarketDeployBlock } from "@nabb/config";
 import { getAbiItem } from "viem";
 import { standardClient, type ClaimEvent } from "./flashblocks";
-import { fetchRecentClaims, indexerAvailable } from "./indexer";
+import { fetchDropClaims, fetchRecentClaims, indexerAvailable } from "./indexer";
 
 const claimedEvent = getAbiItem({ abi: nabbMarketAbi, name: "Claimed" });
 
@@ -12,25 +12,16 @@ const PARALLEL = 4;
 const MAX_RANGES = 40;
 
 /**
- * The most recent claims across every drop, newest first. One-off: used once at startup to fill the
- * activity buffer so the ticker and live column are never blank. An indexer, if a healthy one is
- * configured, answers in a single request; otherwise the chain is read directly.
+ * Reads `Claimed` logs from the standard RPC, newest first, optionally for one drop, until `wanted`
+ * claims are found, the deploy block is reached or the range cap is hit.
  */
-export async function loadRecentClaims(limit = 20): Promise<ClaimEvent[]> {
-  if (await indexerAvailable()) {
-    try {
-      return await fetchRecentClaims(limit);
-    } catch {
-      // Fall through to the chain.
-    }
-  }
-
+async function readClaimsNewestFirst(wanted: number, dropId?: bigint): Promise<ClaimEvent[]> {
   const head = await standardClient.getBlockNumber();
   const found: ClaimEvent[] = [];
   let to = head;
   let ranges = 0;
 
-  while (found.length < limit && to >= nabbMarketDeployBlock && ranges < MAX_RANGES) {
+  while (found.length < wanted && to >= nabbMarketDeployBlock && ranges < MAX_RANGES) {
     const batch: [bigint, bigint][] = [];
     while (
       batch.length < PARALLEL &&
@@ -50,6 +41,7 @@ export async function loadRecentClaims(limit = 20): Promise<ClaimEvent[]> {
           standardClient.getLogs({
             address: nabbMarket.address,
             event: claimedEvent,
+            args: dropId === undefined ? undefined : { dropId },
             fromBlock,
             toBlock,
           }),
@@ -58,12 +50,12 @@ export async function loadRecentClaims(limit = 20): Promise<ClaimEvent[]> {
     ).flat();
 
     for (const log of logs) {
-      const { dropId, claimer, unitIndex, pricePaid, timestamp } = log.args;
+      const { dropId: id, claimer, unitIndex, pricePaid, timestamp } = log.args;
       if (
         log.removed ||
         log.transactionHash === null ||
         log.logIndex === null ||
-        dropId === undefined ||
+        id === undefined ||
         claimer === undefined ||
         unitIndex === undefined ||
         pricePaid === undefined
@@ -72,7 +64,7 @@ export async function loadRecentClaims(limit = 20): Promise<ClaimEvent[]> {
       }
       found.push({
         id: `${log.transactionHash}:${log.logIndex}`,
-        dropId,
+        dropId: id,
         claimer,
         unitIndex,
         pricePaid,
@@ -84,5 +76,50 @@ export async function loadRecentClaims(limit = 20): Promise<ClaimEvent[]> {
     }
   }
 
-  return found.sort((a, b) => b.timestamp - a.timestamp || b.logIndex - a.logIndex).slice(0, limit);
+  return found
+    .sort((a, b) => b.timestamp - a.timestamp || b.logIndex - a.logIndex)
+    .slice(0, wanted);
+}
+
+/**
+ * The most recent claims across every drop, newest first. One-off: used once at startup to fill the
+ * activity buffer so the ticker and live column are never blank. An indexer, if a healthy one is
+ * configured, answers in a single request; otherwise the chain is read directly.
+ */
+export async function loadRecentClaims(limit = 20): Promise<ClaimEvent[]> {
+  if (await indexerAvailable()) {
+    try {
+      return await fetchRecentClaims(limit);
+    } catch {
+      // Fall through to the chain.
+    }
+  }
+  return readClaimsNewestFirst(limit);
+}
+
+/**
+ * One drop's recent claims, newest first, read entirely from the standard RPC. Used as the history
+ * source when the Flashblocks RPC cannot be reached, so a drop's feed is never empty just because
+ * the preconfirmation endpoint is down.
+ */
+export async function loadDropClaims(dropId: bigint, limit = 50): Promise<ClaimEvent[]> {
+  if (await indexerAvailable()) {
+    try {
+      return await fetchDropClaims(dropId, limit);
+    } catch {
+      // Fall through to the chain.
+    }
+  }
+  let wanted = limit;
+  try {
+    const drop = await standardClient.readContract({
+      ...nabbMarket,
+      functionName: "getDrop",
+      args: [dropId],
+    });
+    wanted = Math.min(limit, Number(drop.claimedUnits));
+  } catch {
+    // Unknown claim count: look for up to `limit`.
+  }
+  return wanted > 0 ? readClaimsNewestFirst(wanted, dropId) : [];
 }
