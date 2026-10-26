@@ -12,7 +12,7 @@ export function TabBar({
 }) {
   return (
     <nav className="tabbar" aria-label="Primary">
-      <NavLink to="/" end className="tab">
+      <NavLink to="/drops" className="tab">
         <DropsIcon />
         <span>Drops</span>
       </NavLink>

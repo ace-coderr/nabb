@@ -1,5 +1,6 @@
 import { GIWA_SEPOLIA_FAUCETS, giwaSepolia } from "@nabb/config";
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router";
 import { useAccount, useBalance, useConnect, useDisconnect, type Connector } from "wagmi";
 import { useEnsureChain } from "../hooks/useEnsureChain";
 import { describeError } from "../lib/errors";
@@ -33,7 +34,8 @@ export function ConnectButton({
   const { data: balance } = useBalance({
     address,
     chainId: giwaSepolia.id,
-    query: { enabled: isConnected, refetchInterval: 10_000 },
+    // The tab-bar variant never shows the balance, so only the header instance refreshes it.
+    query: { enabled: isConnected && !tab, refetchInterval: 10_000 },
   });
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -105,6 +107,9 @@ export function ConnectButton({
         </button>
         {open && (
           <div className={menuClass} role="menu">
+            <Link to="/me" className="menu-item" role="menuitem" onClick={() => setOpen(false)}>
+              My activity
+            </Link>
             <button
               className="menu-item"
               role="menuitem"
