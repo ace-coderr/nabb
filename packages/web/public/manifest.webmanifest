@@ -1,7 +1,7 @@
 {
   "name": "Nabb",
   "short_name": "Nabb",
-  "description": "Claim limited drops onchain in a fraction of a second.",
+  "description": "Claim limited drops onchain. Non-custodial, on GIWA.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
