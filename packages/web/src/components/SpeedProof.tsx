@@ -7,16 +7,19 @@ interface Reading {
   run: number;
   preconfirmMs: number;
   finalMs: number;
+  /** How the final time is written, exactly as recorded. */
+  finalLabel: string;
   note?: string;
 }
 
 const READINGS: readonly Reading[] = [
-  { run: 1, preconfirmMs: 446, finalMs: 880 },
-  { run: 2, preconfirmMs: 454, finalMs: 1750 },
+  { run: 1, preconfirmMs: 446, finalMs: 880, finalLabel: "0.88s" },
+  { run: 2, preconfirmMs: 454, finalMs: 1750, finalLabel: "1.75s" },
   {
     run: 3,
     preconfirmMs: 494,
     finalMs: 496,
+    finalLabel: "496ms",
     note: "The sealed block landed almost the moment the claim was preconfirmed. That was luck in block timing, not what to expect.",
   },
 ];
@@ -57,7 +60,7 @@ export function SpeedProof() {
             <tr key={reading.run}>
               <th scope="row">{reading.run}</th>
               <td className="speed-text">{fmt(reading.preconfirmMs)}</td>
-              <td className="speed-text">{fmt(reading.finalMs)}</td>
+              <td className="speed-text">{reading.finalLabel}</td>
               <td className="proof-bars-col" aria-hidden="true">
                 <div className="proof-bar">
                   <span
