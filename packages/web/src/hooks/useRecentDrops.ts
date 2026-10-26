@@ -3,20 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useReadContract, useReadContracts } from "wagmi";
 import type { Drop } from "../lib/drop";
+import type { DropListItem } from "../lib/dropList";
 import { fetchRecentDrops, indexerAvailable } from "../lib/indexer";
 
 const REFRESH_MS = 5_000;
 
 export type DropsSource = "indexer" | "chain";
 
-export interface DropListItem {
-  id: bigint;
-  drop: Drop;
-  /** From the contract's `remaining()`; absent when served by the indexer. */
-  remaining?: bigint;
-  /** From the contract's `isLive()`; absent when served by the indexer. */
-  isLive?: boolean;
-}
+export type { DropListItem };
 
 /**
  * The newest `count` drops. Read straight from NabbMarket — ids `nextDropId - 1` down to 1, one
