@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import type { Address, Hash } from "viem";
-import type { ClaimEvent } from "./lib/flashblocks";
+import {
+  activityFromClaim,
+  mergeActivity,
+  MAX_ITEMS,
+  type ActivityItem,
+} from "./lib/activityBuffer";
 import { loadRecentClaims } from "./lib/recentClaims";
 
 /**
@@ -9,33 +13,7 @@ import { loadRecentClaims } from "./lib/recentClaims";
  * It only collects what the app already reads — the per-drop claim feed and the drop-list refreshes
  * — so showing it anywhere adds no RPC calls of its own.
  */
-export interface ActivityItem {
-  id: string;
-  dropId: bigint;
-  /** Unix seconds. */
-  timestamp: number;
-  /** A single claim… */
-  claimer?: Address;
-  unitIndex?: bigint;
-  pricePaid?: bigint;
-  txHash?: Hash;
-  /** …or several claims noticed at once on a drop. */
-  count?: number;
-}
-
-export function activityFromClaim(c: ClaimEvent): ActivityItem {
-  return {
-    id: c.id,
-    dropId: c.dropId,
-    timestamp: c.timestamp,
-    claimer: c.claimer,
-    unitIndex: c.unitIndex,
-    pricePaid: c.pricePaid,
-    txHash: c.txHash,
-  };
-}
-
-const MAX_ITEMS = 20;
+export { activityFromClaim, mergeActivity, type ActivityItem };
 
 export type SeedStatus = "loading" | "ready" | "error";
 
@@ -47,18 +25,6 @@ interface ActivityContextValue {
 }
 
 const ActivityContext = createContext<ActivityContextValue | undefined>(undefined);
-
-/** Newest first, de-duplicated by id (earlier lists win), capped to the buffer size. */
-export function mergeActivity(...lists: ActivityItem[][]): ActivityItem[] {
-  const seen = new Set<string>();
-  const merged: ActivityItem[] = [];
-  for (const item of lists.flat()) {
-    if (seen.has(item.id)) continue;
-    seen.add(item.id);
-    merged.push(item);
-  }
-  return merged.sort((a, b) => b.timestamp - a.timestamp).slice(0, MAX_ITEMS);
-}
 
 export function ActivityProvider({ children }: { children: ReactNode }) {
   const [live, setLive] = useState<ActivityItem[]>([]);
