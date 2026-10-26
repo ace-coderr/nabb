@@ -346,14 +346,29 @@ a:hover {
   align-items: center;
   gap: var(--sp-3);
   min-height: var(--tap);
-  padding: var(--sp-2) 0;
+  padding: 0;
   border-bottom: 1px solid var(--line);
   font-size: var(--fs-sm);
 }
 .activity-row:last-child {
   border-bottom: 0;
 }
+/* Links fill the whole row height so each is a 44px-tall target. */
+.activity-drop,
+.activity-time {
+  display: inline-flex;
+  align-items: center;
+  align-self: stretch;
+  min-width: var(--tap);
+  min-height: var(--tap);
+}
 .activity-drop {
+  justify-content: center;
+}
+.activity-time {
+  justify-content: flex-end;
+}
+.activity-pill {
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--ember-soft);
@@ -361,10 +376,10 @@ a:hover {
   font-weight: 700;
 }
 .activity-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: var(--sp-1) 0;
   color: var(--text-2);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 .activity-time {
   font-size: var(--fs-xs);
@@ -1472,7 +1487,7 @@ a.drop-card:hover {
   align-items: center;
   gap: var(--sp-3);
   min-height: var(--tap);
-  padding: var(--sp-2);
+  padding: 0 var(--sp-2);
   border-top: 1px solid var(--line);
   font-size: var(--fs-sm);
 }
@@ -1504,6 +1519,12 @@ a.drop-card:hover {
   white-space: nowrap;
 }
 .feed-time {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  align-self: stretch;
+  min-width: var(--tap);
+  min-height: var(--tap);
   white-space: nowrap;
 }
 

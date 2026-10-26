@@ -77,8 +77,8 @@ export function ActivityList({
         const mine = address !== undefined && item.claimer?.toLowerCase() === address.toLowerCase();
         return (
           <li key={item.id} className="activity-row">
-            <Link to={`/drop/${item.dropId}`} className="activity-drop mono" onClick={onNavigate}>
-              #{item.dropId.toString()}
+            <Link to={`/drop/${item.dropId}`} className="activity-drop" onClick={onNavigate}>
+              <span className="activity-pill mono">#{item.dropId.toString()}</span>
             </Link>
             <span className="activity-text">{activityText(item, mine)}</span>
             {item.txHash ? (
