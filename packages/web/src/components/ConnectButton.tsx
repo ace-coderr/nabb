@@ -4,6 +4,7 @@ import { useAccount, useBalance, useConnect, useDisconnect, type Connector } fro
 import { useEnsureChain } from "../hooks/useEnsureChain";
 import { describeError } from "../lib/errors";
 import { formatEth, shortAddress } from "../lib/format";
+import { WalletIcon } from "./Icons";
 
 /** EIP-6963 wallets replace the generic "Injected" entry when any are announced. */
 function visibleConnectors(connectors: readonly Connector[]): Connector[] {
@@ -13,7 +14,18 @@ function visibleConnectors(connectors: readonly Connector[]): Connector[] {
   return hasProvider ? [...connectors] : [];
 }
 
-export function ConnectButton({ size = "md" }: { size?: "md" | "lg" }) {
+/**
+ * Wallet connect / account menu. `variant="tab"` renders it as a bottom-tab-bar item whose menu
+ * opens upward.
+ */
+export function ConnectButton({
+  size = "md",
+  variant = "default",
+}: {
+  size?: "md" | "lg";
+  variant?: "default" | "tab";
+}) {
+  const tab = variant === "tab";
   const { address, isConnected } = useAccount();
   const { connectors, connect, isPending, error, reset } = useConnect();
   const { disconnect } = useDisconnect();
@@ -31,34 +43,71 @@ export function ConnectButton({ size = "md" }: { size?: "md" | "lg" }) {
     const onPointerDown = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
     document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   const btnClass = `btn ${size === "lg" ? "btn-lg btn-block" : ""}`;
+  const menuClass = `menu ${tab ? "menu-up" : ""}`;
 
   if (isConnected && address) {
     if (wrongChain) {
       return (
         <button
-          className={`${btnClass} btn-warn`}
+          className={tab ? "tab tab-warn" : `${btnClass} btn-warn`}
           onClick={() => void ensureChain()}
           disabled={switching}
         >
-          {switching ? "Switching…" : "Switch to GIWA Sepolia"}
+          {tab ? (
+            <>
+              <WalletIcon />
+              <span>{switching ? "Switching…" : "Switch"}</span>
+            </>
+          ) : switching ? (
+            "Switching…"
+          ) : (
+            "Switch to GIWA Sepolia"
+          )}
         </button>
       );
     }
     return (
       <div className="wallet" ref={rootRef}>
-        <button className="wallet-chip" onClick={() => setOpen((o) => !o)}>
-          {balance && <span className="wallet-balance">{formatEth(balance.value, 4)} ETH</span>}
-          <span className="wallet-address">{shortAddress(address)}</span>
+        <button
+          className={tab ? `tab ${open ? "active" : ""}` : "wallet-chip"}
+          onClick={() => setOpen((o) => !o)}
+          aria-haspopup="menu"
+          aria-expanded={open}
+        >
+          {tab ? (
+            <>
+              <WalletIcon />
+              <span>{shortAddress(address)}</span>
+            </>
+          ) : (
+            <>
+              {balance && (
+                <span className="wallet-balance">
+                  <span className="sr-only">Balance </span>
+                  {formatEth(balance.value, 4)} ETH
+                </span>
+              )}
+              <span className="wallet-address">{shortAddress(address)}</span>
+            </>
+          )}
         </button>
         {open && (
-          <div className="menu">
+          <div className={menuClass} role="menu">
             <button
               className="menu-item"
+              role="menuitem"
               onClick={() => {
                 void navigator.clipboard.writeText(address);
                 setOpen(false);
@@ -70,6 +119,7 @@ export function ConnectButton({ size = "md" }: { size?: "md" | "lg" }) {
               <a
                 key={faucet.url}
                 className="menu-item"
+                role="menuitem"
                 href={faucet.url}
                 target="_blank"
                 rel="noreferrer"
@@ -81,6 +131,7 @@ export function ConnectButton({ size = "md" }: { size?: "md" | "lg" }) {
             <div className="menu-divider" />
             <button
               className="menu-item"
+              role="menuitem"
               onClick={() => {
                 disconnect();
                 setOpen(false);
@@ -99,17 +150,28 @@ export function ConnectButton({ size = "md" }: { size?: "md" | "lg" }) {
   return (
     <div className="wallet" ref={rootRef}>
       <button
-        className={`${btnClass} btn-primary`}
+        className={tab ? `tab ${open ? "active" : ""}` : `${btnClass} btn-primary`}
         onClick={() => {
           reset();
           setOpen((o) => !o);
         }}
         disabled={isPending}
+        aria-haspopup="menu"
+        aria-expanded={open}
       >
-        {isPending ? "Connecting…" : "Connect wallet"}
+        {tab ? (
+          <>
+            <WalletIcon />
+            <span>{isPending ? "Connecting…" : "Wallet"}</span>
+          </>
+        ) : isPending ? (
+          "Connecting…"
+        ) : (
+          "Connect wallet"
+        )}
       </button>
       {open && (
-        <div className="menu menu-wide">
+        <div className={`${menuClass} menu-wide`} role="menu">
           {options.length === 0 ? (
             <div className="menu-empty">
               No browser wallet found.{" "}
@@ -123,6 +185,7 @@ export function ConnectButton({ size = "md" }: { size?: "md" | "lg" }) {
               <button
                 key={connector.uid}
                 className="menu-item"
+                role="menuitem"
                 onClick={() => {
                   connect({ connector, chainId: giwaSepolia.id });
                   setOpen(false);

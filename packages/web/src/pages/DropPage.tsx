@@ -1,7 +1,8 @@
 import { explorerAddressUrl, giwaSepolia, nabbMarket } from "@nabb/config";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { activityFromClaim, useActivity } from "../activity";
 import { ClaimFeed } from "../components/ClaimFeed";
 import { DropArt, PhaseBadge, ProgressBar } from "../components/DropBits";
 import { NabButton } from "../components/NabButton";
@@ -30,6 +31,11 @@ export function DropPage() {
     applyClaims(claims);
     void refetch();
   });
+  // Feed the shared ticker / live column from this drop's claim feed (no extra reads).
+  const { push } = useActivity();
+  useEffect(() => {
+    if (feed.claims.length > 0) push(feed.claims.map(activityFromClaim));
+  }, [feed.claims, push]);
   useDocumentTitle(
     dropId === undefined || notFound ? "Drop not found" : (metadata?.name ?? `Drop #${dropId}`),
   );
@@ -78,6 +84,9 @@ export function DropPage() {
 
   return (
     <div className="container">
+      <Link to="/" className="back-link">
+        ← All drops
+      </Link>
       {justCreated && (
         <div className="notice notice-success notice-row">
           <span>Your drop is live on-chain. Share this page so people can nab it.</span>
