@@ -72,7 +72,7 @@ export function ActivityList({
   onNavigate?: () => void;
 }) {
   const { address } = useAccount();
-  const now = useNow(1_000);
+  const now = useNow();
 
   if (items.length === 0) return <ActivityEmpty onNavigate={onNavigate} />;
 
