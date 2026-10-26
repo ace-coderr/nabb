@@ -8,6 +8,7 @@ import {
   cleanDescription,
   cleanName,
   encodeMetadata,
+  isSameSitePath,
   isValidImageInput,
   loadMetadata,
   normalizeMetadata,
@@ -119,6 +120,36 @@ describe("safeImageUrl", () => {
       safeImageUrl(`https://example.com/${"a".repeat(MAX_IMAGE_URL_LENGTH)}`),
       undefined,
     );
+  });
+});
+
+describe("same-site image paths", () => {
+  it("accepts simple site paths such as /drops/name.png", () => {
+    for (const ok of ["/drops/name.png", "/og.png", "/a/b/c-d_e.f.webp", "/drops/my%20pic.png"]) {
+      assert.equal(isSameSitePath(ok), true, ok);
+      assert.equal(safeImageUrl(ok), ok, ok);
+      assert.equal(isValidImageInput(ok), true, ok);
+    }
+  });
+
+  it("rejects protocol-relative, traversal, scheme and odd paths", () => {
+    for (const bad of [
+      "//evil.com/x.png",
+      "/../etc/passwd",
+      "/drops/../../x",
+      "/drops" + String.fromCharCode(92) + "x.png",
+      "drops/name.png",
+      "./name.png",
+      "/drops/a b.png",
+      "/drops/<x>.png",
+      "/drops/x?y=1",
+      "javascript:alert(1)",
+      "/" + "a".repeat(MAX_IMAGE_URL_LENGTH),
+    ]) {
+      assert.equal(isSameSitePath(bad), false, bad);
+      assert.equal(safeImageUrl(bad), undefined, bad);
+      assert.equal(isValidImageInput(bad), false, bad);
+    }
   });
 });
 

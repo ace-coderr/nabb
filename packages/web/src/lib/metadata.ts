@@ -41,19 +41,37 @@ export function resolveUri(uri: string): string {
   return uri.startsWith("ipfs://") ? IPFS_GATEWAY + uri.slice("ipfs://".length) : uri;
 }
 
-/** Only allow image sources that cannot run script or be downgraded to plain http. */
+/**
+ * A path on this site, such as `/drops/name.png`: one leading slash, no scheme, no protocol-relative
+ * `//host`, no backslashes, no `..` segments and only URL-safe characters.
+ */
+export function isSameSitePath(value: string): boolean {
+  return (
+    value.length <= MAX_IMAGE_URL_LENGTH &&
+    /^\/(?!\/)[A-Za-z0-9._~%/-]*$/.test(value) &&
+    !value.split("/").includes("..")
+  );
+}
+
+/**
+ * Only allow image sources that cannot run script or be downgraded to plain http: https URLs,
+ * ipfs:// (through a gateway), data: images and same-site paths.
+ */
 export function safeImageUrl(url: string | undefined): string | undefined {
   if (!url || url.length > MAX_METADATA_CHARS) return undefined;
   const trimmed = url.trim();
   if (/^data:image\//i.test(trimmed)) return trimmed;
+  if (isSameSitePath(trimmed)) return trimmed;
   const resolved = resolveUri(trimmed);
   if (resolved.length > MAX_IMAGE_URL_LENGTH) return undefined;
   return /^https:\/\/[^\s]+$/i.test(resolved) ? resolved : undefined;
 }
 
+/** What the Create form accepts: https://, ipfs:// or a same-site path like /drops/name.png. */
 export function isValidImageInput(url: string): boolean {
   const trimmed = url.trim();
-  return trimmed.length <= MAX_IMAGE_URL_LENGTH && /^(https:\/\/|ipfs:\/\/)\S+$/i.test(trimmed);
+  if (trimmed.length > MAX_IMAGE_URL_LENGTH) return false;
+  return /^(https:\/\/|ipfs:\/\/)\S+$/i.test(trimmed) || isSameSitePath(trimmed);
 }
 
 // Control characters, zero-width characters, line/paragraph separators and every bidirectional

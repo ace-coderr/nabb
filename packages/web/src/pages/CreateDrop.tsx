@@ -6,6 +6,7 @@ import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { ConnectButton } from "../components/ConnectButton";
 import { DropArt, ProgressBar } from "../components/DropBits";
 import { FaucetHint } from "../components/FaucetHint";
+import { ImagePreview } from "../components/ImagePreview";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useEnsureChain } from "../hooks/useEnsureChain";
 import { useNow } from "../hooks/useNow";
@@ -63,7 +64,7 @@ function validate(form: FormState, nowS: number) {
   else if (form.name.trim().length > 60) errors.name = "Keep the name under 60 characters.";
   if (form.description.trim().length > 280) errors.description = "Keep it under 280 characters.";
   if (form.image.trim() && !isValidImageInput(form.image)) {
-    errors.image = "Use an https:// or ipfs:// image link.";
+    errors.image = "Use an https:// or ipfs:// link, or a site path like /drops/name.png.";
   }
 
   let price: bigint | undefined;
@@ -112,7 +113,10 @@ export function CreateDrop() {
   const { writeContractAsync } = useWriteContract();
   const { ensureChain } = useEnsureChain();
   const { canAfford } = useWalletBalance();
-  useDocumentTitle("Create a drop");
+  useDocumentTitle(
+    "Create a drop",
+    "Open a Nabb drop: set a fixed price, a number of units and a time window. One transaction puts it on-chain, and every claim pays you directly.",
+  );
   const [form, setForm] = useState<FormState>(initialForm);
   const [touched, setTouched] = useState(false);
   const [submit, setSubmit] = useState<SubmitState>({ status: "idle" });
@@ -205,13 +209,21 @@ export function CreateDrop() {
               rows={3}
             />
           </Field>
-          <Field label="Image URL" hint="Optional · https:// or ipfs://" error={shownErrors.image}>
+          <Field
+            label="Image"
+            hint="Optional · https://, ipfs:// or /drops/name.png"
+            error={shownErrors.image}
+          >
             <input
               value={form.image}
               onChange={(e) => set("image")(e.target.value)}
-              placeholder="https://…"
+              placeholder="https://… or /drops/name.png"
+              inputMode="url"
+              autoComplete="off"
+              spellCheck={false}
             />
           </Field>
+          <ImagePreview value={form.image} />
 
           <div className="field-row">
             <Field label="Price (ETH)" hint="0 for free" error={shownErrors.price}>
