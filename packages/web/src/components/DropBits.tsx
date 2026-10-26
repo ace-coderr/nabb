@@ -1,22 +1,16 @@
 import { useState } from "react";
 import { PHASE_LABEL, type DropPhase } from "../lib/drop";
+import { GeneratedArt } from "./GeneratedArt";
 
-/** Drop image, or a deterministic gradient tile when there is none (or it fails to load). */
+/** The drop's own image, or original generated artwork seeded by its id. */
 export function DropArt({ image, name, seed }: { image?: string; name: string; seed: bigint }) {
   const [failed, setFailed] = useState(false);
   if (image && !failed) {
     return <img className="drop-art" src={image} alt={name} onError={() => setFailed(true)} />;
   }
-  const hue = Number((seed * 47n) % 360n);
   return (
-    <div
-      className="drop-art drop-art-fallback"
-      style={{
-        background: `linear-gradient(135deg, hsl(${hue} 90% 60%), hsl(${(hue + 60) % 360} 85% 45%))`,
-      }}
-      aria-hidden="true"
-    >
-      {name.trim().charAt(0).toUpperCase() || "N"}
+    <div className="drop-art drop-art-generated">
+      <GeneratedArt seed={seed} className="drop-art-svg" />
     </div>
   );
 }
@@ -36,6 +30,7 @@ export function ProgressBar({ claimed, total }: { claimed: bigint; total: bigint
     <div
       className="progress"
       role="progressbar"
+      aria-label="Claimed"
       aria-valuenow={pct}
       aria-valuemin={0}
       aria-valuemax={100}
