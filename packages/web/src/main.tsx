@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router";
 import { WagmiProvider } from "wagmi";
 import { App } from "./App";
 import { wagmiConfig } from "./wagmi";
+import "./tokens.css";
 import "./styles.css";
 
 const queryClient = new QueryClient({

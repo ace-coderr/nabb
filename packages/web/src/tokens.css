@@ -1,0 +1,85 @@
+/*
+ * Design tokens — the single source for color, type, space, radius and motion.
+ * Palette: warm charcoal-brown surfaces, one ember-orange accent, and an electric cyan that is
+ * reserved for speed numbers (the measured ms readouts) and nothing else.
+ */
+:root {
+  /* Surfaces */
+  --bg: #16110e;
+  --bg-sunk: #110d0b;
+  --surface: #1f1814;
+  --surface-2: #2a211b;
+  --surface-3: #352a22;
+  --line: #3a2e26;
+  --line-strong: #54443a;
+
+  /* Text (all pass WCAG AA on every surface above) */
+  --text: #f6ede4;
+  --text-2: #d3c5b8;
+  --muted: #a99a8b;
+  --on-ember: #1a0d06;
+
+  /* Ember accent */
+  --ember: #ff6b2c;
+  --ember-hover: #ff8651;
+  --ember-deep: #b9400f;
+  --ember-soft: rgba(255, 107, 44, 0.14);
+  --ember-line: rgba(255, 107, 44, 0.45);
+
+  /* Speed accent — numbers only */
+  --speed: #37f1ff;
+  --speed-soft: rgba(55, 241, 255, 0.12);
+
+  /* Status */
+  --ok: #86dca4;
+  --ok-soft: rgba(134, 220, 164, 0.12);
+  --warn: #f7bd4d;
+  --warn-soft: rgba(247, 189, 77, 0.12);
+  --danger: #ff8a8a;
+  --danger-soft: rgba(255, 138, 138, 0.12);
+  --focus: #ffd9bd;
+
+  /* Type */
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.84rem;
+  --fs-base: 0.97rem;
+  --fs-lg: 1.12rem;
+  --fs-xl: 1.5rem;
+  --fs-2xl: clamp(1.9rem, 1.4rem + 2vw, 2.9rem);
+  --fs-display: clamp(2.9rem, 1.6rem + 6vw, 6rem);
+
+  /* Space, shape, layout */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 72px;
+  --radius-lg: 20px;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --tap: 44px;
+  --topbar-h: 60px;
+  --ticker-h: 38px;
+  --tabbar-h: 64px;
+  --live-w: 320px;
+  --page-w: 1180px;
+
+  /* Elevation */
+  --shadow-pop: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --shadow-press: 0 6px 0 var(--ember-deep);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-snap: cubic-bezier(0.3, 1.5, 0.5, 1);
+  --dur-fast: 90ms;
+  --dur: 180ms;
+  --dur-slow: 420ms;
+
+  color-scheme: dark;
+}
