@@ -25,7 +25,7 @@ Because every claim pays out and refunds in the same transaction (and the contra
 
 ### The real-time path (Flashblocks)
 
-GIWA's sequencer streams **flashblocks** — ~200ms slices of the block it is building — ahead of each sealed 1s block. Nabb uses two RPC endpoints:
+GIWA's sequencer streams **flashblocks** — partial snapshots of the block it is building — ahead of each sealed block. Nabb uses two RPC endpoints:
 
 | Client       | Endpoint                                  | Used for                                                 |
 | ------------ | ----------------------------------------- | -------------------------------------------------------- |
@@ -33,12 +33,12 @@ GIWA's sequencer streams **flashblocks** — ~200ms slices of the block it is bu
 | **flash**    | `https://sepolia-rpc-flashblocks.giwa.io` | Preconfirmed receipts, `pending` state and the live feed |
 
 1. **Instant confirmation.** Right after the wallet broadcasts a claim, the app polls `getTransactionReceipt` on the Flashblocks RPC every ~50ms (up to a 3s timeout). The time from broadcast to the first receipt is the number shown in **"Nabbed in {ms}ms ⚡"**. The standard RPC's sealed receipt is awaited in the background and shown as "Final in block N"; if Flashblocks doesn't answer in time, the standard receipt is used instead.
-2. **Live claim feed.** The drop page polls `getLogs` for `Claimed` with `toBlock: 'pending'` every ~250ms. On GIWA, `pending` resolves to the latest flashblock, so other people's claims typically appear within a second or two of being sent. Entries are de-duplicated by `txHash:logIndex`.
+2. **Live claim feed.** The drop page polls `getLogs` for `Claimed` with `toBlock: 'pending'` every ~250ms. On GIWA, `pending` resolves to the latest flashblock, so other people's claims appear shortly after they are sent. Entries are de-duplicated by `txHash:logIndex`.
 3. **Fresh state.** Drop counters and claim dry-runs read the `pending` block, so "units left" and sold-out checks reflect the latest flashblock. Your own claim updates the counters and the feed the moment its receipt arrives.
 
 All Flashblocks reads live in one module: [`packages/web/src/lib/flashblocks.ts`](packages/web/src/lib/flashblocks.ts).
 
-> The measured latency includes the network round trip to GIWA's RPC, so it depends on where you are. In testing from a connection with roughly 500ms round trips to the RPC, preconfirmation took about 450–530ms and the sealed block 1–2s; nearer to GIWA's servers it should be lower.
+> The measured latency includes the network round trip to GIWA's RPC, so it depends on your connection and on the network. The home and how-it-works pages show a table of example readings from the testnet; they are examples, not guarantees.
 
 ### Live activity
 
@@ -107,6 +107,24 @@ This starts both:
 - **indexer** on http://localhost:8787 (first run backfills from the deploy block in a few seconds)
 
 Open the web app, connect your wallet (it offers to add/switch to GIWA Sepolia), create a drop and nab it. In development the app points at the local indexer through the committed `packages/web/.env.development`; `pnpm dev:web` on its own works too and simply reads everything on-chain. To run the indexer alone: `pnpm dev:indexer`.
+
+### Pages
+
+| Route           | What it is                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| `/`             | Home: a compact hero, live drops with status filters, how it works, example speed readings |
+| `/drops`        | Every drop, with status filters (Live, Upcoming, Ended, Sold out) and sorting              |
+| `/drop/:id`     | One drop: claim it, watch claims arrive, close it if it's yours                            |
+| `/create`       | Open a drop, with a live preview of its image and card                                     |
+| `/me`           | Drops the connected wallet created (with Close drop) and drops it claimed                  |
+| `/how-it-works` | The three steps, why claims feel instant, and an FAQ                                       |
+| `/safety`       | How funds are handled, the contract address and chain id, and known limitations            |
+
+Everything is read from the contract in the browser. The list pages (`/drops`, `/me`) read once per visit with batched multicalls and have no refresh timer of their own.
+
+**Artwork.** A drop without an image gets generated artwork: one of eight motif families in one of six warm palettes, chosen from the drop id so neighbouring drops never share a family. The Create form's image field takes an `https://` or `ipfs://` address, or a path on this site such as `/drops/name.png` (put the file in `packages/web/public/drops/`).
+
+**Featured drops.** `packages/web/src/featured.ts` can pin drop ids to the top of the home grid. Left empty, the home grid shows the newest live drops first. `/drops` always lists every drop.
 
 ### Configuration
 
