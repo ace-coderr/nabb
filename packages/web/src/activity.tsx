@@ -1,6 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import type { Address, Hash } from "viem";
 import type { ClaimEvent } from "./lib/flashblocks";
+import { loadRecentClaims } from "./lib/recentClaims";
 
 /**
  * Shared in-memory activity buffer behind the ticker, the live side column and the mobile sheet.
@@ -33,28 +35,57 @@ export function activityFromClaim(c: ClaimEvent): ActivityItem {
   };
 }
 
-const MAX_ITEMS = 40;
+const MAX_ITEMS = 20;
+
+export type SeedStatus = "loading" | "ready" | "error";
 
 interface ActivityContextValue {
   items: ActivityItem[];
   push: (incoming: ActivityItem[]) => void;
+  /** Whether the one-off history read that fills the buffer at startup has finished. */
+  seedStatus: SeedStatus;
 }
 
 const ActivityContext = createContext<ActivityContextValue | undefined>(undefined);
 
+/** Newest first, de-duplicated by id (earlier lists win), capped to the buffer size. */
+export function mergeActivity(...lists: ActivityItem[][]): ActivityItem[] {
+  const seen = new Set<string>();
+  const merged: ActivityItem[] = [];
+  for (const item of lists.flat()) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    merged.push(item);
+  }
+  return merged.sort((a, b) => b.timestamp - a.timestamp).slice(0, MAX_ITEMS);
+}
+
 export function ActivityProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<ActivityItem[]>([]);
+  const [live, setLive] = useState<ActivityItem[]>([]);
 
   const push = useCallback((incoming: ActivityItem[]) => {
-    setItems((prev) => {
-      const known = new Set(prev.map((i) => i.id));
-      const added = incoming.filter((i) => !known.has(i.id));
-      if (added.length === 0) return prev;
-      return [...added, ...prev].sort((a, b) => b.timestamp - a.timestamp).slice(0, MAX_ITEMS);
+    setLive((prev) => {
+      const next = mergeActivity(prev, incoming);
+      const unchanged = next.length === prev.length && next.every((item, i) => item === prev[i]);
+      return unchanged ? prev : next;
     });
   }, []);
 
-  const value = useMemo(() => ({ items, push }), [items, push]);
+  // One read of recent claims across all drops at startup — a single query that never refetches —
+  // so the ticker and live column have content before any live claim arrives.
+  const seed = useQuery({
+    queryKey: ["activity", "seed"],
+    queryFn: () => loadRecentClaims(MAX_ITEMS),
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: 1,
+    refetchOnReconnect: false,
+  });
+  const seeded = useMemo(() => seed.data?.map(activityFromClaim) ?? [], [seed.data]);
+  const seedStatus: SeedStatus = seed.isError ? "error" : seed.isPending ? "loading" : "ready";
+
+  const items = useMemo(() => mergeActivity(live, seeded), [live, seeded]);
+  const value = useMemo(() => ({ items, push, seedStatus }), [items, push, seedStatus]);
   return <ActivityContext.Provider value={value}>{children}</ActivityContext.Provider>;
 }
 

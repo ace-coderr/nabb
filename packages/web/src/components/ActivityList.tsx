@@ -1,7 +1,8 @@
 import { explorerTxUrl } from "@nabb/config";
+import { nabbMarket } from "@nabb/config";
 import { Link } from "react-router";
-import { useAccount } from "wagmi";
-import type { ActivityItem } from "../activity";
+import { useAccount, useReadContract } from "wagmi";
+import { useActivity, type ActivityItem } from "../activity";
 import { useNow } from "../hooks/useNow";
 import { formatAgo, formatPrice, shortAddress } from "../lib/format";
 
@@ -16,19 +17,59 @@ export function activityText(item: ActivityItem, mine: boolean): string {
   return `${n} new ${n === 1 ? "claim" : "claims"}`;
 }
 
+/** Shown while the buffer is empty: loading, or a friendly nudge toward the newest drop. */
+function ActivityEmpty({ onNavigate }: { onNavigate?: () => void }) {
+  const { seedStatus } = useActivity();
+  // A one-off read; nothing here refetches on a timer.
+  const { data: nextDropId } = useReadContract({
+    ...nabbMarket,
+    functionName: "nextDropId",
+    query: { enabled: seedStatus !== "loading" },
+  });
+
+  if (seedStatus === "loading") {
+    return (
+      <div className="activity-empty" aria-busy="true">
+        <p className="muted">Loading recent claims…</p>
+        <div className="skeleton skeleton-line" />
+        <div className="skeleton skeleton-line w-80" />
+        <div className="skeleton skeleton-line w-30" />
+      </div>
+    );
+  }
+
+  const newest = nextDropId !== undefined && nextDropId > 1n ? nextDropId - 1n : undefined;
+  return (
+    <div className="activity-empty">
+      <p className="muted">
+        {seedStatus === "error"
+          ? "Couldn't load recent claims. New ones will still appear here as they land."
+          : "No claims yet. Be the first to nab one."}
+      </p>
+      {newest !== undefined ? (
+        <Link to={`/drop/${newest}`} className="link-quiet" onClick={onNavigate}>
+          Open the newest drop (#{newest.toString()}) →
+        </Link>
+      ) : (
+        <Link to="/create" className="link-quiet" onClick={onNavigate}>
+          Create the first drop →
+        </Link>
+      )}
+    </div>
+  );
+}
+
 export function ActivityList({
   items,
   onNavigate,
-  emptyText,
 }: {
   items: ActivityItem[];
   onNavigate?: () => void;
-  emptyText: string;
 }) {
   const { address } = useAccount();
   const now = useNow(1_000);
 
-  if (items.length === 0) return <p className="activity-empty muted">{emptyText}</p>;
+  if (items.length === 0) return <ActivityEmpty onNavigate={onNavigate} />;
 
   return (
     <ol className="activity-list">

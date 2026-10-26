@@ -27,10 +27,7 @@ export function LiveColumn({ collapsed, onToggle }: { collapsed: boolean; onTogg
       </div>
       {!collapsed && (
         <div className="live-body">
-          <ActivityList
-            items={items}
-            emptyText="Nothing yet. Claims you open a drop for will stream in here."
-          />
+          <ActivityList items={items} />
         </div>
       )}
     </aside>

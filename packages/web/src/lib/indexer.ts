@@ -86,6 +86,12 @@ export async function fetchRecentDrops(limit: number) {
   return { items: page.items.map(toDrop), hasMore: page.nextCursor !== null };
 }
 
+/** Newest claims across all drops. */
+export async function fetchRecentClaims(limit: number) {
+  const page = await get<IndexerPage<IndexedClaim>>(`/claims?limit=${Math.min(limit, 200)}`);
+  return page.items.map(toClaim);
+}
+
 export async function fetchDropClaims(dropId: bigint, limit = 50) {
   const page = await get<IndexerPage<IndexedClaim>>(`/drops/${dropId}/claims?limit=${limit}`);
   return page.items.map(toClaim);

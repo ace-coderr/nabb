@@ -9,10 +9,10 @@ import { BoltIcon } from "./Icons";
  * are the accessible versions), so it is hidden from assistive tech and not focusable.
  */
 export function Ticker() {
-  const { items } = useActivity();
+  const { items, seedStatus } = useActivity();
   const { address } = useAccount();
 
-  const entries = items.slice(0, 12).map((item) => {
+  const entries = items.slice(0, 20).map((item) => {
     const mine = address !== undefined && item.claimer?.toLowerCase() === address.toLowerCase();
     return { item, text: activityText(item, mine) };
   });
@@ -33,23 +33,27 @@ export function Ticker() {
 
   return (
     <div className="ticker" aria-hidden="true">
-      <div className="ticker-label">
-        <span className="pulse" /> Live
-      </div>
-      <div className="ticker-window">
-        {entries.length === 0 ? (
-          <span className="ticker-idle">
-            Claims land here as they happen — open a drop to watch one go.
-          </span>
-        ) : (
-          <div
-            className="ticker-track"
-            style={{ animationDuration: `${Math.max(24, entries.length * 7)}s` }}
-          >
-            <div className="ticker-run">{track(false)}</div>
-            <div className="ticker-run">{track(true)}</div>
-          </div>
-        )}
+      <div className="ticker-inner">
+        <div className="ticker-label">
+          <span className="pulse" /> Live
+        </div>
+        <div className="ticker-window">
+          {entries.length === 0 ? (
+            <span className="ticker-idle">
+              {seedStatus === "loading"
+                ? "Loading recent claims…"
+                : "No claims yet — be the first to nab one."}
+            </span>
+          ) : (
+            <div
+              className="ticker-track"
+              style={{ animationDuration: `${Math.max(24, entries.length * 7)}s` }}
+            >
+              <div className="ticker-run">{track(false)}</div>
+              <div className="ticker-run">{track(true)}</div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

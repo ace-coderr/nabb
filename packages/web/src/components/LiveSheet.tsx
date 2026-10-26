@@ -41,11 +41,7 @@ export function LiveSheet({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <div className="sheet-body">
-          <ActivityList
-            items={items}
-            onNavigate={onClose}
-            emptyText="Nothing yet. Open a drop and claims will stream in here."
-          />
+          <ActivityList items={items} onNavigate={onClose} />
         </div>
       </div>
     </div>
