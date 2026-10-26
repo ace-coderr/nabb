@@ -2,7 +2,7 @@
 
 **Tap. Nabbed.** Nabb is a real-time, non-custodial claim market on [GIWA](https://sepolia-explorer.giwa.io), an OP Stack Ethereum L2. A creator opens a _drop_ — a limited run of identical units at a fixed price — and anyone can hit **Nab it** to claim one. Payment goes straight to the creator inside the claim transaction; the contract never holds funds.
 
-The point is speed. Claims are confirmed from GIWA's Flashblocks preconfirmations, so an on-chain claim feels like a web tap, and the app shows exactly how long it took: **"Nabbed in 180ms ⚡"**.
+The point is speed. Claims are confirmed from GIWA's Flashblocks preconfirmations, so an on-chain claim feels like a web tap, and the app shows exactly how long it took: **"Nabbed in {ms}ms ⚡"**.
 
 ---
 
@@ -33,12 +33,16 @@ GIWA's sequencer streams **flashblocks** — ~200ms slices of the block it is bu
 | **flash**    | `https://sepolia-rpc-flashblocks.giwa.io` | Preconfirmed receipts, `pending` state and the live feed |
 
 1. **Instant confirmation.** Right after the wallet broadcasts a claim, the app polls `getTransactionReceipt` on the Flashblocks RPC every ~50ms (up to a 3s timeout). The time from broadcast to the first receipt is the number shown in **"Nabbed in {ms}ms ⚡"**. The standard RPC's sealed receipt is awaited in the background and shown as "Final in block N"; if Flashblocks doesn't answer in time, the standard receipt is used instead.
-2. **Live claim feed.** The drop page polls `getLogs` for `Claimed` with `toBlock: 'pending'` every ~250ms. On GIWA, `pending` resolves to the latest flashblock, so other people's claims appear about a second after they are sent. Entries are de-duplicated by `txHash:logIndex`.
+2. **Live claim feed.** The drop page polls `getLogs` for `Claimed` with `toBlock: 'pending'` every ~250ms. On GIWA, `pending` resolves to the latest flashblock, so other people's claims typically appear within a second or two of being sent. Entries are de-duplicated by `txHash:logIndex`.
 3. **Fresh state.** Drop counters and claim dry-runs read the `pending` block, so "units left" and sold-out checks reflect the latest flashblock. Your own claim updates the counters and the feed the moment its receipt arrives.
 
 All Flashblocks reads live in one module: [`packages/web/src/lib/flashblocks.ts`](packages/web/src/lib/flashblocks.ts).
 
-> The measured latency includes the network round trip to GIWA's RPC. Near the RPC it lands around 200ms; from far away, expect roughly one round trip on top.
+> The measured latency includes the network round trip to GIWA's RPC, so it depends on where you are. In testing from a connection with roughly 500ms round trips to the RPC, preconfirmation took about 450–530ms and the sealed block 1–2s; nearer to GIWA's servers it should be lower.
+
+### Live activity
+
+The ticker under the top bar, the live column on desktop and the Live sheet on phones all read one in-memory buffer of the 20 most recent claims. It is filled once at startup from recent `Claimed` logs across all drops (a single read, newest first — or one request to the indexer when one is configured and healthy), and then topped up from data the app already fetches: the open drop's claim feed and the drops list's refreshes. It adds no polling of its own. On the home page the live column starts collapsed; expand it with the button at its top, and the choice is remembered.
 
 ### Reading drops and history
 
@@ -146,6 +150,8 @@ The web app ships as a static site that talks straight to GIWA Sepolia — no se
    - every path rewrites to `/index.html`, so `/create` and `/drop/:id` work on direct visits and refreshes.
 3. Deploy. **No environment variables are required.**
 
+`vercel.json` also sets security headers: a Content-Security-Policy (scripts only from the site itself; network access limited to HTTPS), `X-Content-Type-Options`, `X-Frame-Options: DENY`, a strict referrer policy and a locked-down permissions policy. If you point the app at an indexer, it must be served over HTTPS (the policy allows any HTTPS origin for `connect-src`).
+
 To use a hosted indexer, set `VITE_INDEXER_URL` to its HTTPS URL (and allow the site's origin with the indexer's `CORS_ORIGIN`). The site checks its health first and falls back to on-chain reads whenever it is unavailable.
 
 To reproduce the production build locally:
@@ -249,7 +255,7 @@ Response types are exported from `@nabb/config` (`IndexedDrop`, `IndexedClaim`, 
 | --------------------------- | -------------------------------------------------------- |
 | `pnpm dev`                  | Web + indexer in watch mode                              |
 | `pnpm build`                | Compile contracts, bundle the indexer, build the web app |
-| `pnpm test`                 | Contract and indexer tests                               |
+| `pnpm test`                 | Contract, indexer and web unit tests                     |
 | `pnpm typecheck`            | Type-check every package                                 |
 | `pnpm lint` / `pnpm format` | ESLint / Prettier                                        |
 | `pnpm contracts:deploy`     | Deploy NabbMarket to GIWA Sepolia                        |
@@ -259,9 +265,13 @@ Response types are exported from `@nabb/config` (`IndexedDrop`, `IndexedClaim`, 
 
 ---
 
-## Notes
+## Notes and known limitations
 
-- **Testnet software.** NabbMarket has a full test suite but has not been audited.
+- **Testnet software.** NabbMarket has a full test suite (including adversarial cases) but has not been professionally audited.
 - **Fixed prices.** The price of a drop never changes once it is created.
+- **Per-wallet limits are per address.** Someone with several wallets can claim more than `maxPerWallet`; the contract cannot tell wallets belonging to one person apart. Free drops are the easiest to farm this way.
+- **A seller controls its own drop.** Payment goes to the seller during `claim`, so a seller contract can reject ETH (claims on its drop revert) or burn gas (claimers of its drop pay more). Claimers are protected from loss of funds, since a failed payment reverts the whole claim, but not from wasted gas; wallets show gas estimates before signing. A seller can also close its drop at any time.
+- **No cap on `metadataURI`.** Anyone can store a large string (tens of kilobytes fit in one transaction) in their own drop, which makes reads of that drop heavier. Claims never read it, so claiming is unaffected, and the web app limits how much metadata it will parse and display. A future version of the contract should cap its length.
+- **Stray ETH.** The contract holds no funds in any normal flow, but anyone can force-send ETH to it with `selfdestruct`; it cannot be recovered.
 - **Claim history** shows up to the 50 most recent claims per drop, read from chain logs (or the indexer when one is in use).
 - **Metadata** for drops created in the app is stored on-chain as a base64 JSON `data:` URI (`name`, `description`, `image`); `ipfs://` and `https://` JSON URIs are also supported.
