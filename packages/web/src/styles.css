@@ -484,10 +484,10 @@ a:hover {
   overflow-y: auto;
   padding: var(--sp-2) var(--sp-4) var(--sp-5);
 }
+/* Transform only: the sheet must be fully visible even where animations never advance. */
 @keyframes sheet-in {
   from {
     transform: translateY(40px);
-    opacity: 0;
   }
 }
 
