@@ -307,6 +307,9 @@ export function CreateDrop() {
               <ProgressBar claimed={0n} total={1n} />
             </div>
           </div>
+          <p className="muted small preview-note">
+            Artwork is generated from the drop id once it is created.
+          </p>
         </aside>
       </div>
     </div>

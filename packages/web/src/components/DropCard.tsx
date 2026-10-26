@@ -18,12 +18,14 @@ export function DropCard({ item, now }: { item: DropListItem; now: number }) {
 
   return (
     <Link to={`/drop/${id}`} className="card drop-card">
-      <DropArt image={metadata?.image} name={name} seed={id} />
-      <div className="drop-card-body">
-        <div className="drop-card-top">
+      <div className="drop-card-media">
+        <DropArt image={metadata?.image} name={name} seed={id} />
+        <div className="drop-card-badges">
           <PhaseBadge phase={phase} />
-          <span className="muted mono">#{id.toString()}</span>
+          <span className="drop-card-id mono">#{id.toString()}</span>
         </div>
+      </div>
+      <div className="drop-card-body">
         <h3 className="drop-card-title">{name}</h3>
         <div className="drop-card-row">
           <span className="price">{formatPrice(drop.price)}</span>
