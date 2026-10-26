@@ -13,33 +13,46 @@ import { DropPage } from "./pages/DropPage";
 import { Home } from "./pages/Home";
 import { NotFound } from "./pages/NotFound";
 
-const COLLAPSED_KEY = "nabb.live.collapsed";
+const HOME_KEY = "nabb.live.collapsed.home";
+const OTHER_KEY = "nabb.live.collapsed";
 
-/** Remembers the live column's collapsed state; storage may be unavailable, so never rely on it. */
-function useCollapsed(): [boolean, () => void] {
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(COLLAPSED_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
+function readPreference(key: string): boolean | undefined {
+  try {
+    const value = localStorage.getItem(key);
+    return value === "1" ? true : value === "0" ? false : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Whether the live column is collapsed. On the home page it starts collapsed so the hero and the
+ * drop grid get the full width; elsewhere it starts open. Each side remembers the user's own
+ * choice. Storage may be unavailable, so it is never relied on.
+ */
+function useCollapsed(isHome: boolean): [boolean, () => void] {
+  const [preferences, setPreferences] = useState(() => ({
+    home: readPreference(HOME_KEY),
+    other: readPreference(OTHER_KEY),
+  }));
+  const collapsed = (isHome ? preferences.home : preferences.other) ?? isHome;
+
   const toggle = useCallback(() => {
-    setCollapsed((current) => {
-      try {
-        localStorage.setItem(COLLAPSED_KEY, current ? "0" : "1");
-      } catch {
-        // Not persisted; the toggle still works for this visit.
-      }
-      return !current;
-    });
-  }, []);
+    const next = !collapsed;
+    setPreferences((current) => ({ ...current, [isHome ? "home" : "other"]: next }));
+    try {
+      localStorage.setItem(isHome ? HOME_KEY : OTHER_KEY, next ? "1" : "0");
+    } catch {
+      // Not persisted; the toggle still works for this visit.
+    }
+  }, [collapsed, isHome]);
+
   return [collapsed, toggle];
 }
 
 export function App() {
   const { pathname } = useLocation();
-  const [collapsed, toggleCollapsed] = useCollapsed();
+  const [collapsed, toggleCollapsed] = useCollapsed(pathname === "/");
   const [sheetOpen, setSheetOpen] = useState(false);
   const closeSheet = useCallback(() => setSheetOpen(false), []);
 

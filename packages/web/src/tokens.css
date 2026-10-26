@@ -4,6 +4,12 @@
  * reserved for speed numbers (the measured ms readouts) and nothing else.
  */
 :root {
+  /* Channel triplets for translucent layers: rgb(var(--bg-rgb) / 0.9) */
+  --bg-rgb: 22 17 14;
+  --surface-rgb: 31 24 20;
+  --scrim-rgb: 10 6 4;
+  --ember-rgb: 255 107 44;
+
   /* Surfaces */
   --bg: #16110e;
   --bg-sunk: #110d0b;
@@ -68,7 +74,9 @@
   --ticker-h: 38px;
   --tabbar-h: 64px;
   --live-w: 320px;
-  --page-w: 1180px;
+  --page-w: 1320px;
+  /* Left/right edge shared by the nav, ticker and page content so their edges line up */
+  --edge: 16px;
 
   /* Elevation */
   --shadow-pop: 0 18px 40px rgba(0, 0, 0, 0.45);
@@ -82,4 +90,10 @@
   --dur-slow: 420ms;
 
   color-scheme: dark;
+}
+
+@media (min-width: 700px) {
+  :root {
+    --edge: 24px;
+  }
 }
