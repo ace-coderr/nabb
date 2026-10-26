@@ -6,7 +6,18 @@ import { GeneratedArt } from "./GeneratedArt";
 export function DropArt({ image, name, seed }: { image?: string; name: string; seed: bigint }) {
   const [failed, setFailed] = useState(false);
   if (image && !failed) {
-    return <img className="drop-art" src={image} alt={name} onError={() => setFailed(true)} />;
+    // The URL is chosen by the drop's creator: send no referrer and load it lazily.
+    return (
+      <img
+        className="drop-art"
+        src={image}
+        alt={name}
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={() => setFailed(true)}
+      />
+    );
   }
   return (
     <div className="drop-art drop-art-generated">
