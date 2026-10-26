@@ -5,7 +5,15 @@ import { reconciledPhase } from "../lib/drop";
 import { formatDuration, formatPrice } from "../lib/format";
 import { DropArt, PhaseBadge, ProgressBar } from "./DropBits";
 
-export function DropCard({ item, now }: { item: DropListItem; now: number }) {
+export function DropCard({
+  item,
+  now,
+  featured = false,
+}: {
+  item: DropListItem;
+  now: number;
+  featured?: boolean;
+}) {
   const { id, drop } = item;
   const { data: metadata } = useMetadata(drop.metadataURI, id);
   const phase = reconciledPhase(drop, now, item.isLive);
@@ -22,7 +30,10 @@ export function DropCard({ item, now }: { item: DropListItem; now: number }) {
         <DropArt image={metadata?.image} name={name} seed={id} />
         <div className="drop-card-badges">
           <PhaseBadge phase={phase} />
-          <span className="drop-card-id mono">#{id.toString()}</span>
+          <span className="drop-card-tags">
+            {featured && <span className="drop-card-featured">Featured</span>}
+            <span className="drop-card-id mono">#{id.toString()}</span>
+          </span>
         </div>
       </div>
       <div className="drop-card-body">

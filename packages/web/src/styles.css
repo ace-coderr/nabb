@@ -502,16 +502,6 @@ a:hover {
   font-size: var(--fs-sm);
   color: var(--muted);
 }
-.footer-inner {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--sp-3);
-}
-.footer strong {
-  color: var(--text);
-  font-weight: 600;
-}
 .footer a {
   display: inline-flex;
   align-items: center;
@@ -924,36 +914,6 @@ a.drop-card:hover {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-2) var(--sp-5);
-}
-.hero-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-  margin: var(--sp-5) 0 0;
-  padding: 0;
-  list-style: none;
-}
-.hero-facts li {
-  padding: 6px 14px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  color: var(--text-2);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-}
-.hero-art {
-  position: relative;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-pop);
-}
-.hero-art-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
 }
 .section-head {
   display: flex;
@@ -1547,9 +1507,6 @@ a.drop-card:hover {
   .nav {
     display: flex;
   }
-  .net-pill {
-    display: inline-flex;
-  }
   .topbar-wallet {
     display: block;
   }
@@ -1561,15 +1518,6 @@ a.drop-card:hover {
     flex-wrap: wrap;
     align-content: flex-start;
     min-height: 2.7em;
-  }
-  .hero {
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-    gap: var(--sp-7);
-    padding: var(--sp-7) 0 var(--sp-8);
-  }
-  .hero-art {
-    aspect-ratio: 1;
-    transform: rotate(2deg);
   }
   .drop-layout {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);

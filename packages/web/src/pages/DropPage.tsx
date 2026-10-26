@@ -1,16 +1,16 @@
-import { explorerAddressUrl, giwaSepolia, nabbMarket } from "@nabb/config";
-import { useEffect, useState } from "react";
+import { explorerAddressUrl } from "@nabb/config";
+import { useEffect } from "react";
 import { Link, useLocation, useParams } from "react-router";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useAccount } from "wagmi";
 import { activityFromClaim, useActivity } from "../activity";
 import { ClaimFeed } from "../components/ClaimFeed";
+import { CloseDropButton } from "../components/CloseDropButton";
 import { DropArt, PhaseBadge, ProgressBar } from "../components/DropBits";
 import { NabButton } from "../components/NabButton";
 import { ShareButton } from "../components/ShareButton";
 import { useClaimFeed } from "../hooks/useClaimFeed";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useDrop } from "../hooks/useDrop";
-import { useEnsureChain } from "../hooks/useEnsureChain";
 import { useMetadata } from "../hooks/useMetadata";
 import { useNow } from "../hooks/useNow";
 import { dropPhase, parseDropId, type Drop } from "../lib/drop";
@@ -38,6 +38,9 @@ export function DropPage() {
   }, [feed.claims, push]);
   useDocumentTitle(
     dropId === undefined || notFound ? "Drop not found" : (metadata?.name ?? `Drop #${dropId}`),
+    dropId === undefined || notFound
+      ? "There is no drop with that id on GIWA Sepolia."
+      : `Claim a unit of drop #${dropId} on Nabb. The creator is paid in the same transaction.`,
   );
 
   if (dropId === undefined || notFound) {
@@ -190,48 +193,13 @@ function SellerControls({
   onClosed: () => void;
 }) {
   const { address } = useAccount();
-  const publicClient = usePublicClient({ chainId: giwaSepolia.id });
-  const { writeContractAsync, isPending } = useWriteContract();
-  const { ensureChain } = useEnsureChain();
-  const [error, setError] = useState<string>();
-  const [waiting, setWaiting] = useState(false);
-
   const isSeller = address?.toLowerCase() === drop.seller.toLowerCase();
-  if (!isSeller || !drop.active || !publicClient) return null;
-
-  async function close() {
-    if (!window.confirm("Close this drop? Nobody will be able to claim from it afterwards."))
-      return;
-    setError(undefined);
-    try {
-      await ensureChain();
-      const hash = await writeContractAsync({
-        ...nabbMarket,
-        functionName: "closeDrop",
-        args: [dropId],
-        chainId: giwaSepolia.id,
-      });
-      setWaiting(true);
-      await publicClient!.waitForTransactionReceipt({ hash });
-      onClosed();
-    } catch (e) {
-      setError(describeError(e));
-    } finally {
-      setWaiting(false);
-    }
-  }
+  if (!isSeller || !drop.active) return null;
 
   return (
     <div className="seller">
       <span className="muted small">You created this drop.</span>
-      <button
-        className="btn btn-ghost btn-sm"
-        onClick={() => void close()}
-        disabled={isPending || waiting}
-      >
-        {isPending || waiting ? "Closing…" : "Close drop"}
-      </button>
-      {error && <div className="notice notice-error">{error}</div>}
+      <CloseDropButton dropId={dropId} onClosed={onClosed} />
     </div>
   );
 }

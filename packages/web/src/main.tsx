@@ -7,6 +7,7 @@ import { App } from "./App";
 import { wagmiConfig } from "./wagmi";
 import "./tokens.css";
 import "./styles.css";
+import "./pages.css";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchOnWindowFocus: false } },

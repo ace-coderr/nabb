@@ -3,6 +3,7 @@ import { Route, Routes, useLocation } from "react-router";
 import { ActivityProvider } from "./activity";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Footer } from "./components/Footer";
+import { TestnetBanner } from "./components/TestnetBanner";
 import { Header } from "./components/Header";
 import { LiveColumn } from "./components/LiveColumn";
 import { LiveSheet } from "./components/LiveSheet";
@@ -10,8 +11,12 @@ import { TabBar } from "./components/TabBar";
 import { Ticker } from "./components/Ticker";
 import { CreateDrop } from "./pages/CreateDrop";
 import { DropPage } from "./pages/DropPage";
+import { Drops } from "./pages/Drops";
 import { Home } from "./pages/Home";
+import { HowItWorks } from "./pages/HowItWorks";
+import { Me } from "./pages/Me";
 import { NotFound } from "./pages/NotFound";
+import { Safety } from "./pages/Safety";
 
 const HOME_KEY = "nabb.live.collapsed.home";
 const OTHER_KEY = "nabb.live.collapsed";
@@ -62,6 +67,7 @@ export function App() {
         <a className="skip-link" href="#main">
           Skip to content
         </a>
+        <TestnetBanner />
         <div className="chrome">
           <Header />
           <Ticker />
@@ -72,7 +78,11 @@ export function App() {
             <ErrorBoundary key={pathname}>
               <Routes>
                 <Route path="/" element={<Home />} />
+                <Route path="/drops" element={<Drops />} />
                 <Route path="/create" element={<CreateDrop />} />
+                <Route path="/me" element={<Me />} />
+                <Route path="/how-it-works" element={<HowItWorks />} />
+                <Route path="/safety" element={<Safety />} />
                 <Route path="/drop/:dropId" element={<DropPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
