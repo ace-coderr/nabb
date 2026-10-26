@@ -1,11 +1,12 @@
 import { giwaSepolia, nabbMarket } from "@nabb/config";
-import { useCallback, useState } from "react";
-import type { Hash } from "viem";
+import { useCallback, useRef, useState } from "react";
+import type { Address, Hash, TransactionReceipt } from "viem";
 import { useAccount, useWriteContract } from "wagmi";
-import { describeError } from "../lib/errors";
+import { describeError, isTransientRpcError } from "../lib/errors";
 import {
   claimFromReceipt,
   simulateClaimPending,
+  standardClient,
   waitForFinalReceipt,
   waitForFlashReceipt,
   type ClaimEvent,
@@ -26,6 +27,8 @@ export type ClaimState =
       via: "flashblocks" | "standard";
       /** Set once the standard RPC returns the sealed receipt. */
       final?: { blockNumber: bigint; ms: number };
+      /** The standard RPC could not be reached for the sealed receipt (the claim itself landed). */
+      finalFailed?: boolean;
     }
   | { status: "error"; message: string; hash?: Hash };
 
@@ -40,6 +43,34 @@ export interface ClaimCallbacks {
 }
 
 const REVERTED = "Your claim reverted — someone may have nabbed the last unit first.";
+const MAY_STILL_LAND =
+  " Your transaction may still confirm — check the explorer before trying again.";
+
+/**
+ * Dry-runs the claim so sold-out, ended and limit errors show before the wallet prompt. Reads the
+ * latest flashblock; if that RPC is unreachable or rate-limited it falls back to the standard RPC,
+ * and if both are unreachable it lets the wallet decide rather than blocking a valid claim. Only a
+ * genuine contract revert stops the claim.
+ */
+async function simulateBeforeSending(dropId: bigint, price: bigint, account: Address) {
+  try {
+    await simulateClaimPending(dropId, price, account);
+    return;
+  } catch (error) {
+    if (!isTransientRpcError(error)) throw error;
+  }
+  try {
+    await standardClient.simulateContract({
+      ...nabbMarket,
+      functionName: "claim",
+      args: [dropId],
+      value: price,
+      account,
+    });
+  } catch (error) {
+    if (!isTransientRpcError(error)) throw error;
+  }
+}
 
 /**
  * Claim flow: dry-run against the latest flashblock, send through the wallet, then race to the
@@ -51,15 +82,18 @@ export function useClaim({ onPreconfirmed, onSettled }: ClaimCallbacks = {}) {
   const { writeContractAsync } = useWriteContract();
   const { ensureChain } = useEnsureChain();
   const [state, setState] = useState<ClaimState>({ status: "idle" });
+  // Guards against a second click starting another claim before the first has rendered as busy.
+  const inFlight = useRef(false);
 
   const claim = useCallback(
     async (dropId: bigint, price: bigint) => {
-      if (!address) return;
+      if (!address || inFlight.current) return;
+      inFlight.current = true;
       let hash: Hash | undefined;
       try {
         setState({ status: "confirming" });
         await ensureChain();
-        await simulateClaimPending(dropId, price, address);
+        await simulateBeforeSending(dropId, price, address);
 
         hash = await writeContractAsync({
           ...nabbMarket,
@@ -74,6 +108,8 @@ export function useClaim({ onPreconfirmed, onSettled }: ClaimCallbacks = {}) {
         setState({ status: "pending", hash, sentAt });
 
         const finalPromise = waitForFinalReceipt(hash);
+        // If we return early below, nobody awaits this; don't leave an unhandled rejection behind.
+        finalPromise.catch(() => undefined);
         const flash = await waitForFlashReceipt(hash, { startedAt: sentAt });
 
         if (flash) {
@@ -92,10 +128,23 @@ export function useClaim({ onPreconfirmed, onSettled }: ClaimCallbacks = {}) {
           onPreconfirmed?.(claim, broadcastAt);
         }
 
-        const final = await finalPromise;
+        let final: TransactionReceipt | undefined;
+        try {
+          final = await finalPromise;
+        } catch (error) {
+          // Without a preconfirmation there is nothing to show yet, so this is a real failure.
+          if (!flash) throw error;
+        }
         const finalMs = performance.now() - sentAt;
         const settledHash = hash;
-        if (final.status !== "success") {
+        if (!final) {
+          // Preconfirmed, but the sealed receipt could not be fetched: keep the success on screen.
+          setState((prev) =>
+            prev.status === "nabbed" && prev.hash === settledHash
+              ? { ...prev, finalFailed: true }
+              : prev,
+          );
+        } else if (final.status !== "success") {
           setState({ status: "error", hash: settledHash, message: REVERTED });
         } else if (flash) {
           setState((prev) =>
@@ -117,8 +166,11 @@ export function useClaim({ onPreconfirmed, onSettled }: ClaimCallbacks = {}) {
           });
         }
       } catch (error) {
-        setState({ status: "error", message: describeError(error), hash });
+        // Once a hash exists the transaction may still land even though waiting for it failed.
+        const base = describeError(error);
+        setState({ status: "error", message: hash ? base + MAY_STILL_LAND : base, hash });
       } finally {
+        inFlight.current = false;
         onSettled?.();
       }
     },

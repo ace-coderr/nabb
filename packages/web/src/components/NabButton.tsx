@@ -134,7 +134,9 @@ function PendingPanel({ sentAt }: { sentAt: number }) {
  */
 function Race({ state, sentAt }: { state: ClaimState; sentAt: number | undefined }) {
   const nabbed = state.status === "nabbed" ? state : undefined;
-  const racing = state.status === "pending" || (nabbed !== undefined && nabbed.final === undefined);
+  const racing =
+    state.status === "pending" ||
+    (nabbed !== undefined && nabbed.final === undefined && !nabbed.finalFailed);
   const elapsed = useElapsed(sentAt, racing);
 
   const preMs =
@@ -228,6 +230,8 @@ function ClaimResult({ state, sentAt }: { state: ClaimState; sentAt: number | un
               <>
                 Final in block {state.final.blockNumber.toString()} · {formatMs(state.final.ms)}
               </>
+            ) : state.finalFailed ? (
+              <>Couldn't confirm the sealed block — check the explorer.</>
             ) : (
               <>
                 <span className="spinner" /> Waiting for the sealed block…
